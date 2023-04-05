@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+  "settings": {
+    "enable_typescript_language_service": false,
+    "LSP": {
+      "Deno": {
+        "enabled": true
+      },
+      "LSP-typescript": {
+        "enabled": false
+      },
+    },
+  },
+}
