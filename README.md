@@ -13,7 +13,7 @@ Documentation is unfortunately sparse at the moment as I was a bit rushed turnin
 Basic usage is as simple as importing the main `mod.ts` file and creating a client instance
 
 ```ts
-import MarkLogicRestAPIClient, { Region } from 'https://github.com/RevanProdigalKnight/marklogic-rest-api-fetch-client/src/mod.ts';
+import MarkLogicRestAPIClient, { Region } from 'https://github.com/RevanProdigalKnight/marklogic-rest-api-fetch-client/blob/main/src/mod.ts';
 
 const client = new MarkLogicRestAPIClient();
 
@@ -66,7 +66,7 @@ The methods contained in the return value are added to the `customMethods` membe
 Usage is as follows:
 
 ```ts
-import MarkLogicRestAPIClient, { EndpointBuilder } from 'https://github.com/RevanProdigalKnight/marklogic-rest-api-fetch-client/src/mod.ts';
+import MarkLogicRestAPIClient, { EndpointBuilder } from 'https://github.com/RevanProdigalKnight/marklogic-rest-api-fetch-client/blob/main/src/mod.ts';
 
 const client = new MarkLogicRestAPIClient()
   .withCustomEndpoint('./countDocumentsInDb.xqy', function(this: MarkLogicRestAPIClient, endpointBuilder: EndpointBuilder) {
