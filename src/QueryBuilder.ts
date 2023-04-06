@@ -828,7 +828,7 @@ export abstract class Indexed {
 	readonly 'json-property'?: JSONProperty['json-property'];
 	readonly element?: Element['element'] | Attribute['element'];
 	readonly attribute?: Attribute['attribute'];
-	readonly field?: Field['field'];
+	readonly field?: QueryField['field'];
 	readonly 'path-index'?: PathIndex['path-index'];
 
 	constructor(index: IndexedName, isContainer = false) {
@@ -840,7 +840,7 @@ export abstract class Indexed {
 			this.element = index.element;
 			this.attribute = index.attribute;
 		} else if (isContainer) {
-			if (index instanceof Field) {
+			if (index instanceof QueryField) {
 				this.field = index.field;
 			} else if (index instanceof PathIndex) {
 				this['path-index'] = index['path-index'];
@@ -931,7 +931,7 @@ export class FragmentScope {
 	}
 }
 
-export class Field {
+export class QueryField {
 	readonly field: {
 		readonly name: string;
 		readonly collation?: string;
@@ -953,7 +953,7 @@ export class PathIndex {
 	}
 }
 
-export type IndexedName = Attribute | Element | Field | PathIndex | JSONProperty;
+export type IndexedName = Attribute | Element | QueryField | PathIndex | JSONProperty;
 
 export class LSQT {
 	readonly 'lsqt-query': LSQTQuery;
@@ -1323,7 +1323,7 @@ export default class QueryBuilder {
 	}
 
 	field(name: string, collation?: string) {
-		return new Field(name, collation);
+		return new QueryField(name, collation);
 	}
 
 	fragmentScope(scopeType: string) {

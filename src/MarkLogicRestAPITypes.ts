@@ -239,6 +239,79 @@ export interface AlertActionRuleOptions extends AlertActionOptions {
   readonly rule: string;
 }
 
+export interface AlertPropertiesOptions extends BaseAlertOptions {
+  readonly uri?: string;
+  readonly name?: string;
+}
+
+export interface AlertConfigOptions extends AlertPropertiesOptions {
+  readonly uri: string;
+}
+
+export interface AlertPropertiesDeleteConfigOptions extends AlertConfigOptions {
+  readonly 'delete-triggers'?: boolean;
+}
+
+export interface AlertTriggersOptions extends BaseAlertOptions {
+  readonly uri?: string;
+  readonly name?: string;
+}
+
+export interface AlertTriggerOptions extends BaseAlertOptions {
+  readonly trigger: string | number;
+}
+
+/** Content Processing Framework */
+export interface BaseCpfOptions extends Parameters {
+  readonly db: string | number;
+
+  readonly format?: 'html' | 'json' | 'xml';
+}
+
+export type CpfConfigsOptions = BaseCpfOptions;
+
+export interface CpfConfigDomainOptions extends CpfConfigsOptions {
+  readonly domain: string | number;
+}
+
+export interface CpfConfigPipelineOptions extends CpfConfigsOptions {
+  readonly pipeline: string | number;
+}
+
+/** Databases */
+
+export interface BaseDatabaseOptions extends Parameters {
+  readonly format?: 'html' | 'json' | 'xml';
+}
+
+export interface DatabasesOptions extends BaseDatabaseOptions {
+  readonly view?: 'schema' | 'metrics' | 'package' | 'default';
+}
+
+export interface DatabaseOptions extends BaseDatabaseOptions {
+  readonly db: string | number;
+
+  readonly view?: 'counts' | 'edit' | 'status' | 'package' | 'default';
+}
+
+export interface DeleteDatabaseOptions extends DatabaseOptions {
+  readonly 'forest-delete'?: boolean;
+}
+
+export interface JobCreatedResponse {
+  readonly 'job-id': string | number;
+  readonly 'host-name': string;
+}
+
+export interface JobStatusResponse extends JobCreatedResponse {
+  readonly status: string;
+}
+
+export interface CancelJobResponse {
+  readonly 'job-id': string | number;
+  readonly canceled: boolean;
+}
+
 /** Flexible Replication */
 export interface BaseFlexrepOptions extends Parameters {
   readonly format?: 'html' | 'json' | 'xml';

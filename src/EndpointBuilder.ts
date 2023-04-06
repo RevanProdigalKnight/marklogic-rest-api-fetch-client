@@ -17,8 +17,8 @@ export interface ExtendedResponse<R = unknown> extends Response {
 	json(): Promise<R>;
 }
 
-export type EndpointMethod<P extends Parameters | void = Parameters, R = unknown> = (opts: P, init?: Partial<ExtendedRequestInit>) => Promise<ExtendedResponse<R>>
-export type EndpointMethodImplementation<P extends Parameters | void = Parameters, R = unknown> = (init: ExtendedRequestInit<P>) => Promise<ExtendedResponse<R>>;
+export type EndpointMethod<P extends Parameters | void = Parameters, R = unknown> = <R2 = R>(opts: P, init?: Partial<ExtendedRequestInit>) => Promise<ExtendedResponse<R2>>;
+export type EndpointMethodImplementation<P extends Parameters | void = Parameters, R = unknown> = <R2 = R>(init: ExtendedRequestInit<P>) => Promise<ExtendedResponse<R2>>;
 
 // deno-lint-ignore no-empty-interface
 export interface EmptyEndpoint {}

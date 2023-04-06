@@ -374,3 +374,574 @@ export interface AlertActionRule {
   readonly 'user-name'?: string;
   readonly option: string[];
 }
+
+export interface AlertConfig {
+  readonly id?: string | number;
+  readonly uri: string;
+  readonly name: string;
+  readonly description: string;
+  readonly trigger: string[];
+  readonly domain: string[];
+  readonly option: string[];
+  readonly action: string[];
+}
+
+export interface AlertTriggerEvent {
+  readonly 'data-event': {
+    readonly 'document-scope': { readonly uri: string; };
+    readonly 'collection-scope': { readonly uri: string; };
+    readonly 'directory-scope': { readonly uri: string; readonly depth: number; };
+    readonly 'document-content': { readonly 'update-kind': string; };
+    readonly 'any-property-content': unknown;
+    readonly 'any-custom-property-content': unknown;
+    readonly 'property-content': { readonly 'property-name': { readonly 'namespace-uri': string; readonly localname: unknown; }; };
+    readonly when: unknown;
+  };
+  readonly 'database-online-event': {
+    readonly user: string | number;
+    readonly 'user-id': string | number;
+    readonly 'user-name': string;
+  };
+}
+
+export interface Permission {
+  readonly permission: {
+    readonly 'role-name': string;
+    readonly capability: string;
+  };
+}
+
+export interface AlertTrigger {
+  readonly id?: string | number;
+  readonly name: string;
+  readonly description: string;
+  readonly event: AlertTriggerEvent;
+  readonly module: string;
+  readonly 'module-db': string;
+  readonly 'module-root': string;
+  readonly enabled: boolean;
+  readonly recursive: boolean;
+  readonly 'task-priority': unknown;
+  readonly permissions: Permission;
+}
+
+export interface CpfConfig {
+  readonly 'domain-name': string;
+  readonly 'restart-user-name': string;
+  readonly 'eval-module': string;
+  readonly 'eval-root': string;
+  readonly 'conversion-enabled': boolean;
+  readonly permissions: Permission;
+}
+
+export interface CpfDomain {
+  readonly 'domain-name': string;
+  readonly 'description': string;
+  readonly scope: string;
+  readonly uri: string;
+  readonly depth: number;
+  readonly 'eval-module': string;
+  readonly 'eval-root': string;
+  readonly pipelines: { readonly pipeline: unknown; };
+  readonly permissions: Permission;
+}
+
+export interface CpfPipelineTransitionExecute {
+  readonly annotation: string;
+  readonly condition: unknown;
+  readonly action: unknown;
+}
+
+export interface CpfPipelineBaseTransition {
+  readonly annotation: string;
+  readonly priority: unknown;
+  readonly 'default-action': unknown;
+  readonly execute: CpfPipelineTransitionExecute;
+}
+
+export interface CpfPipelineStatusOrStateTransition extends CpfPipelineBaseTransition {
+  readonly status: unknown;
+  readonly 'on-success': unknown;
+  readonly 'on-failure': unknown;
+  readonly always: boolean;
+}
+
+export interface CpfPipelineEventTransition extends CpfPipelineBaseTransition {
+  readonly event: unknown;
+}
+
+export interface CpfPipeline {
+  readonly annotation: string;
+  readonly 'pipeline-id': string | number;
+  readonly 'pipeline-name': string;
+  readonly 'pipeline-description': string;
+  readonly 'success-action': unknown;
+  readonly 'failure-action': unknown;
+  readonly 'status-transition': CpfPipelineStatusOrStateTransition;
+  readonly 'state-transition': CpfPipelineStatusOrStateTransition;
+  readonly 'event-transition': CpfPipelineEventTransition;
+}
+
+export interface DatabaseAssignmentPolicy {
+  readonly 'assignment-policy-name': string;
+  readonly 'partition-key': { readonly 'cts:base-reference': unknown; };
+  readonly 'lower-bound-included': boolean;
+  readonly 'default-partition': boolean;
+}
+
+export interface DatabaseBackup {
+  readonly 'database-backup': {
+    readonly 'backup-id': string | number;
+    readonly 'backup-enabled': boolean;
+    readonly 'backup-directory': string;
+    readonly 'backup-kek-id': string;
+    readonly 'backup-type': unknown;
+    readonly 'backup-period': unknown;
+    readonly 'backup-month-day': unknown;
+    readonly 'backup-days': { readonly day: unknown; };
+    readonly 'backup-start-date': string;
+    readonly 'backup-start-time': string;
+    readonly 'backup-timestamp': string;
+    readonly 'max-backups': number | string;
+    readonly 'backup-schemas-database'?: boolean;
+    readonly 'backup-security-database'?: boolean;
+    readonly 'backup-triggers-database'?: boolean;
+    readonly 'include-replicas'?: boolean;
+    readonly 'journal-archiving'?: boolean;
+    readonly 'journal-archive-path'?: string;
+    readonly 'journal-archive-lag-limit'?: string | number;
+    readonly 'incremental-backup'?: boolean;
+    readonly 'purge-journal-archive'?: boolean;
+  };
+}
+
+export interface DatabaseField {
+  readonly field: {
+    readonly 'field-name': string;
+    readonly 'include-root': boolean;
+    readonly 'field-path': { readonly path: string; readonly weight: number; };
+    readonly metadata: unknown;
+
+    readonly 'excluded-elements'?: ExcludedElement[];
+    readonly 'included-elements'?: IncludedElement[];
+    readonly 'tokenizer-overrides'?: TokenizerOverride[];
+    readonly 'word-lexicons'?: WordLexicon[];
+
+    readonly 'stemmed-searches'?: boolean;
+    readonly 'word-searches'?: boolean;
+    readonly 'field-value-searches'?: boolean;
+    readonly 'field-value-positions'?: boolean;
+    readonly 'fast-phrase-searches'?: boolean;
+    readonly 'fast-case-sensitive-searches'?: boolean;
+    readonly 'fast-diacritic-sensitive-searches'?: boolean;
+    readonly 'trailing-wildcard-searches'?: boolean;
+    readonly 'trailing-wildcard-word-searches'?: boolean;
+    readonly 'three-character-searches'?: boolean;
+    readonly 'two-character-searches'?: boolean;
+    readonly 'one-character-searches'?: boolean;
+  }
+}
+
+export interface DatabaseForeignMaster {
+  readonly 'foreign-cluster-name': string;
+  readonly 'foreign-database-name': string;
+  readonly 'connect-forests-by-name': boolean;
+}
+
+export interface DatabaseForeignReplica {
+  readonly 'foreign-replica': {
+    readonly 'foreign-cluster-name': string;
+    readonly 'foreign-database-name': string;
+    readonly 'connect-forests-by-name': boolean;
+    readonly 'lag-limit': number | string;
+    readonly 'replication-enabled': boolean;
+    readonly 'queue-size': number | string;
+  };
+}
+
+export interface DatabaseForest {
+  readonly forest: string | number;
+}
+
+export interface DatabaseReference {
+  readonly 'database-reference': {
+    readonly 'reference-cluster-name': string;
+    readonly 'reference-database-name': string;
+  };
+}
+
+export interface DatabaseReplication {
+  readonly 'foreign-replicas': DatabaseForeignReplica[];
+  readonly 'foreign-master': DatabaseForeignMaster;
+}
+
+export interface DefaultRuleset {
+  readonly 'default-ruleset': {
+    readonly location: unknown;
+  };
+}
+
+export interface ElementAttributeWordLexicon {
+  readonly 'element-attribute-word-lexicon': {
+    readonly 'parent-namespace-uri': string;
+    readonly 'parent-localname': string;
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+    readonly collation: string;
+  };
+}
+
+export interface ElementWordLexicon {
+  readonly 'element-word-lexicon': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+    readonly collation: string;
+  };
+}
+
+export interface ElementWordQueryThrough {
+  readonly 'element-word-query-through': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+  };
+}
+
+export interface ExcludedElement {
+  readonly 'excluded-element': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+    readonly 'attribute-namespace-uri': string;
+    readonly 'attributelocalname': string;
+    readonly 'attribute-value': boolean;
+  };
+}
+
+export interface FragmentRoot {
+  readonly 'fragment-root': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+  };
+}
+
+export interface FragmentParent {
+  readonly 'fragment-parent': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+  };
+}
+
+export interface GeospatialElementIndex {
+  readonly 'geospatial-element-index': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+    readonly 'coordinate-system': string;
+    readonly 'point-format': unknown;
+    readonly 'range-value-positions': boolean;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface GeospatialElementChildIndex {
+  readonly 'geospatial-element-child-index': {
+    readonly 'parent-namespace-uri': string;
+    readonly 'parent-localname': string;
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+    readonly 'coordinate-system': string;
+    readonly 'point-format': unknown;
+    readonly 'range-value-positions': boolean;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface GeospatialElementPairIndex {
+  readonly 'geospatial-element-pair-index': {
+    readonly 'parent-namespace-uri': string;
+    readonly 'parent-localname': string;
+    readonly 'latitude-namespace-uri': string;
+    readonly 'latitude-localname': string;
+    readonly 'longitude-namespace-uri': string;
+    readonly 'longitude-localname': string;
+    readonly 'coordinate-system': string;
+    readonly 'point-format': unknown;
+    readonly 'range-value-positions': boolean;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface GeospatialElementAttributePairIndex {
+  readonly 'geospatial-element-attribute-pair-index': {
+    readonly 'parent-namespace-uri': string;
+    readonly 'parent-localname': string;
+    readonly 'latitude-namespace-uri': string;
+    readonly 'latitude-localname': string;
+    readonly 'longitude-namespace-uri': string;
+    readonly 'longitude-localname': string;
+    readonly 'coordinate-system': string;
+    readonly 'point-format': unknown;
+    readonly 'range-value-positions': boolean;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface GeospatialPathIndex {
+  readonly 'geospatial-path-index': {
+    readonly 'path-expression': string;
+    readonly 'coordinate-system': string;
+    readonly 'point-format': unknown;
+    readonly 'range-value-positions': boolean;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface GeospatialRegionPathIndex {
+  readonly 'geospatial-region-path-index': {
+    readonly 'path-expression': string;
+    readonly 'coordinate-system': string;
+    readonly 'point-format': unknown;
+    readonly 'range-value-positions': boolean;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface IncludedElement {
+  readonly 'included-element': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+    readonly weight: number;
+    readonly 'attribute-namespace-uri': string;
+    readonly 'attributelocalname': string;
+    readonly 'attribute-value': boolean;
+  };
+}
+
+export interface MergeBlackout {
+  readonly 'merge-blackout': {
+    readonly 'blackout-type': unknown;
+    readonly limit: string | number;
+    readonly 'merge-priority': unknown;
+    readonly days: { readonly day: unknown; };
+    readonly period: {
+      readonly 'start-date'?: string;
+      readonly 'start-time'?: string;
+      readonly duration?: string;
+      readonly 'end-date'?: string;
+      readonly 'end-time'?: string;
+    };
+  };
+}
+
+export interface PathNamespace {
+  readonly 'path-namespace': {
+    readonly prefix: string;
+    readonly 'namespace-uri': string;
+  };
+}
+
+export interface PhraseThrough {
+  readonly 'phrase-through': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+  };
+}
+
+export interface PhraseAround {
+  readonly 'phrase-around': {
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+  };
+}
+
+export interface RangeElementIndex {
+  readonly 'range-element-index': {
+    readonly 'scalar-type': unknown;
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+    readonly collation: string;
+    readonly 'range-value-positions': unknown;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface RangeFieldIndex {
+  readonly 'range-field-index': {
+    readonly 'scalar-type': unknown;
+    readonly 'field-name': string;
+    readonly collation: string;
+    readonly 'range-value-positions': unknown;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface RangePathIndex {
+  readonly 'range-path-index': {
+    readonly 'scalar-type': unknown;
+    readonly 'path-expression': string;
+    readonly collation: string;
+    readonly 'range-value-positions': unknown;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface RangeElementAttributeIndex {
+  readonly 'range-element-attribute-index': {
+    readonly 'scalar-type': unknown;
+    readonly 'parent-namespace-uri': string;
+    readonly 'parent-localname': string;
+    readonly 'namespace-uri': string;
+    readonly localname: string;
+    readonly collation: string;
+    readonly 'range-value-positions': unknown;
+    readonly 'invalid-values': boolean;
+  };
+}
+
+export interface RetiredForest {
+  readonly 'retired-forest': string | number;
+}
+
+export interface Subdatabase {
+  readonly subdatabase: {
+    readonly 'cluster-name': string;
+    readonly 'database-name': string;
+  };
+}
+
+export interface TokenizerOverride {
+  readonly 'tokenizer-override': {
+    readonly character: string;
+    readonly 'tokenizer-class': unknown;
+  };
+}
+
+export interface WordLexicon {
+  readonly 'word-lexicon': boolean;
+}
+
+export interface Database {
+  readonly 'database-name': string;
+  readonly enabled: boolean;
+  readonly 'security-database': string | number;
+  readonly 'schema-database': string | number;
+  readonly 'triggers-database': string | number;
+  readonly 'data-encryption': boolean;
+  readonly 'backup-encryption-key': string;
+  readonly forests: DatabaseForest;
+  readonly subdatabases: Subdatabase;
+  readonly 'retired-forests': RetiredForest;
+  readonly 'retired-forest-count': number;
+  readonly language: string;
+
+  readonly 'assignment-policy'?: DatabaseAssignmentPolicy;
+  readonly 'database-backups'?: DatabaseBackup[];
+  readonly 'database-references'?: DatabaseReference[];
+  readonly 'database-replication'?: DatabaseReplication;
+  readonly 'default-rulesets'?: DefaultRuleset[];
+  readonly 'element-word-lexicons'?: ElementWordLexicon[];
+  readonly 'element-attribute-word-lexicons'?: ElementAttributeWordLexicon[];
+  readonly 'element-word-query-throughs'?: ElementWordQueryThrough[];
+  readonly fields?: DatabaseField[];
+  readonly 'fragment-roots'?: FragmentRoot[];
+  readonly 'fragment-parents'?: FragmentParent[];
+  readonly 'geospatial-element-indexes'?: GeospatialElementIndex[];
+  readonly 'geospatial-element-child-indexes'?: GeospatialElementChildIndex[];
+  readonly 'geospatial-element-pair-indexes'?: GeospatialElementPairIndex[];
+  readonly 'geospatial-element-attribuet-pair-indexes'?: GeospatialElementAttributePairIndex[];
+  readonly 'geospatial-path-indexes'?: GeospatialPathIndex[];
+  readonly 'geospatial-region-path-indexes'?: GeospatialRegionPathIndex[];
+  readonly 'merge-blackouts'?: MergeBlackout[];
+  readonly 'path-namespaces'?: PathNamespace[];
+  readonly 'phrase-around'?: PhraseAround[];
+  readonly 'phrase-word-query-throughs'?: PhraseThrough[];
+  readonly 'range-element-indexes'?: RangeElementIndex[];
+  readonly 'range-element-attribute-indexes'?: RangeElementAttributeIndex[];
+  readonly 'range-field-indexes'?: RangeFieldIndex[];
+  readonly 'range-path-indexes'?: RangePathIndex[];
+  readonly 'word-lexicons'?: WordLexicon[];
+
+  readonly 'stemmed-searches'?: boolean;
+  readonly 'word-searches'?: boolean;
+  readonly 'word-positions'?: boolean;
+  readonly 'fast-phrase-searches'?: boolean;
+  readonly 'fast-reverse-searches'?: boolean;
+  readonly 'triple-index'?: boolean;
+  readonly 'triple-positions'?: boolean;
+  readonly 'fast-case-sensitive-searches'?: boolean;
+  readonly 'fast-diacritic-sensitive-searches'?: boolean;
+  readonly 'fast-element-word-searches'?: boolean;
+  readonly 'fast-word-searches'?: boolean;
+  readonly 'element-word-searches'?: boolean;
+  readonly 'fast-element-phrase-searches'?: boolean;
+  readonly 'element-value-positions'?: boolean;
+  readonly 'field-value-searches'?: boolean;
+  readonly 'field-value-positions'?: boolean;
+  readonly 'three-character-searches'?: boolean;
+  readonly 'two-character-searches'?: boolean;
+  readonly 'one-character-searches'?: boolean;
+  readonly 'fast-element-character-searches'?: boolean;
+  readonly 'trailing-wildcard-searches'?: boolean;
+  readonly 'trailing-wildcard-word-positions'?: boolean;
+  readonly 'fast-element-trailing-wildcard-searches'?: boolean;
+  readonly 'uri-lexicon'?: boolean;
+  readonly 'collection-lexicon'?: boolean;
+  readonly 'reindexer-enable'?: boolean;
+  readonly 'reindexer-throttle'?: number;
+  readonly 'reindexer-timestamp'?: number | string;
+  readonly 'directory-creation'?: boolean;
+  readonly 'maintain-last-modified'?: boolean;
+  readonly 'maintain-directory-last-modified'?: boolean;
+  readonly 'inherit-permissions'?: boolean;
+  readonly 'inherit-collections'?: boolean;
+  readonly 'inherit-quality'?: boolean;
+  readonly 'preallocate-journals'?: boolean;
+  readonly 'preload-mapped-data'?: boolean;
+  readonly 'preload-replica-mapped-data'?: boolean;
+  readonly 'range-index-optimize'?: boolean;
+  readonly 'positions-list-max-size'?: number | string;
+  readonly 'in-memory-limit'?: number | string;
+  readonly 'in-memory-list-size'?: number | string;
+  readonly 'in-memory-tree-size'?: number | string;
+  readonly 'in-memory-range-index-size'?: number | string;
+  readonly 'in-memory-reverse-index-size'?: number | string;
+  readonly 'in-memory-triple-index-size'?: number | string;
+  readonly 'in-memory-geospatial-region-index-size'?: number | string;
+  readonly 'triple-index-geohash-precision'?: number | string;
+  readonly 'large-size-threshold'?: number | string;
+  readonly 'journal-size'?: number | string;
+  readonly 'journal-count'?: number | string;
+  readonly locking?: unknown;
+  readonly journaling?: unknown;
+  readonly 'format-compatibility'?: unknown;
+  readonly 'index-detection'?: unknown;
+  readonly 'expunge-locks'?: unknown;
+  readonly 'tf-normalization'?: unknown;
+  readonly 'merge-priority'?: unknown;
+  readonly 'merge-max-size'?: number | string;
+  readonly 'merge-min-size'?: number | string;
+  readonly 'merge-min-ratio'?: number | string;
+  readonly 'merge-timestamp'?: number | string;
+  readonly 'retain-until-backup'?: boolean;
+  readonly 'rebalancer-enable'?: boolean;
+  readonly 'rebalancer-throttle'?: number | string;
+  readonly 'shutdown-on-storage-failure'?: boolean;
+  readonly 'storage-failure-timeout'?: number | string;
+}
+
+export interface BaseDatabaseBackupOrRestoreOptions {
+  readonly forest: string[];
+  readonly 'backup-dir': string;
+  readonly incremental: boolean;
+  readonly 'incremental-dir': string;
+  readonly 'journal-archiving': boolean;
+  readonly 'journal-archive-path': string;
+  readonly 'include-replicas': boolean;
+  readonly password: string;
+}
+
+export interface DatabaseBackupOptions extends BaseDatabaseBackupOrRestoreOptions {
+  readonly 'lag-limit': number | string;
+}
+
+export interface DatabaseRestoreOptions extends BaseDatabaseBackupOrRestoreOptions {
+  readonly 'restore-to-time': string;
+}

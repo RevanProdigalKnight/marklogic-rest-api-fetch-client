@@ -23,6 +23,7 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 	readonly #baseURI: string;
 	readonly #defaultImplementation: EndpointMethodImplementation = (init => this.#fetch(init));
 	readonly #preferredFormat: ReturnFormatType;
+  readonly #headers: HeadersInit;
 
 	public readonly PatchBuilder = PatchBuilder;
 	public readonly QueryBuilder = QueryBuilder;
@@ -30,9 +31,10 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 
 	public readonly customMethods = {} as CE;
 
-	public constructor(baseURI = '/', preferredFormat: ReturnFormatType = 'json') {
+	public constructor(baseURI = '/', preferredFormat: ReturnFormatType = 'json', headers: HeadersInit) {
 		this.#baseURI = baseURI;
 		this.#preferredFormat = preferredFormat;
+    this.#headers = headers;
 	}
 
 	public get fetch() {
@@ -191,9 +193,10 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 		.withPost<RestAPIType.PostSearchOptions, StructuredType.SearchResults>()
 		.build();
 
-	public clearDatabase<T extends RestAPIType.DeleteSearchOptions>(database: NonNullable<T['database']>, options?: Omit<T, 'database'>) {
-		return this.#search.delete({ ...options, database });
-	}
+  // NOTE: Commented because of function name conflict with POST /manage/v2/databases/:db { operation: 'clear-database' }
+	// public clearDatabase<T extends RestAPIType.DeleteSearchOptions>(database: NonNullable<T['database']>, options?: Omit<T, 'database'>) {
+	// 	return this.#search.delete({ ...options, database });
+	// }
 
 	public deleteCollection<T extends RestAPIType.DeleteSearchOptions>(collection: NonNullable<T['collection']>, options?: Omit<T, 'collection'>) {
 		return this.#search.delete({ ...options, collection });
@@ -398,19 +401,316 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
     return this.#alertActionRuleProperties.put({ db, action, uri, rule, ...options }, { data: properties });
   }
 
-  #alertConfigs = this.#endpoint<RestAPIType.AlertActionsOptions>('./manage/v2/databases/:db/alert/configs')
+  #alertConfigs = this.#endpoint<RestAPIType.AlertPropertiesOptions>('./manage/v2/databases/:db/alert/configs')
     .withGet()
     .withPost()
-    .withDelete()
+    .withDelete<RestAPIType.AlertPropertiesDeleteConfigOptions>()
     .build();
 
-  public getAlertConfigs<T extends RestAPIType.AlertActionsOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+  public getAlertConfigs<T extends RestAPIType.AlertPropertiesOptions>(db: T['db'], options?: Omit<T, 'db'>) {
     return this.#alertConfigs.get({ db, ...options });
   }
 
-  // public createAlertConfigs<T extends RestAPIType.AlertActionsOptions>(db: T['db'], config: StructuredType., options?: Omit<T, 'db'>) {
-  //   return this.#alertConfigs.post({ db, ...options });
-  // }
+  public createAlertConfig<T extends RestAPIType.AlertPropertiesOptions>(db: T['db'], config: StructuredType.AlertConfig, options?: Omit<T, 'db'>) {
+    return this.#alertConfigs.post({ db, ...options }, { data: config });
+  }
+
+  public deleteAlertConfig<T extends RestAPIType.AlertPropertiesDeleteConfigOptions>(db: T['db'], uri: T['uri'], options?: Omit<T, 'db' | 'uri'>) {
+    return this.#alertConfigs.delete({ db, uri, ...options });
+  }
+
+  #alertConfigProperties = this.#endpoint<RestAPIType.AlertConfigOptions>('./manage/v2/databases/:db/alert/configs/properties')
+    .withGet()
+    .withPut()
+    .build();
+
+  public getAlertConfig<T extends RestAPIType.AlertConfigOptions>(db: T['db'], uri: T['uri'], options?: Omit<T, 'db' | 'uri'>) {
+    return this.#alertConfigProperties.get({ db, uri, ...options });
+  }
+
+  public updateAlertConfig<T extends RestAPIType.AlertConfigOptions>(db: T['db'], uri: T['uri'], config: StructuredType.AlertConfig, options?: Omit<T, 'db' | 'uri'>) {
+    return this.#alertConfigProperties.put({ db, uri, ...options }, { data: config });
+  }
+
+  #alertTriggers = this.#endpoint<RestAPIType.AlertTriggersOptions>('./manage/v2/databases/:db/triggers')
+    .withGet()
+    .withPost()
+    .build();
+
+  public getAlertTriggers<T extends RestAPIType.AlertTriggersOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#alertTriggers.get({ db, ...options });
+  }
+
+  public createAlertTrigger<T extends RestAPIType.AlertTriggersOptions>(db: T['db'], trigger: StructuredType.AlertTrigger, options?: Omit<T, 'db'>) {
+    return this.#alertTriggers.post({ db, ...options }, { data: trigger });
+  }
+
+  #alertTrigger = this.#endpoint<RestAPIType.AlertTriggerOptions>('./manage/v2/databases/:db/triggers/:trigger')
+    .withGet()
+    .withDelete()
+    .build();
+
+  public getAlertTrigger<T extends RestAPIType.AlertTriggerOptions>(db: T['db'], trigger: T['trigger'], options?: Omit<T, 'db' | 'trigger'>) {
+    return this.#alertTrigger.get({ db, trigger, ...options });
+  }
+
+  public deleteAlertTrigger<T extends RestAPIType.AlertTriggerOptions>(db: T['db'], trigger: T['trigger'], options?: Omit<T, 'db' | 'trigger'>) {
+    return this.#alertTrigger.delete({ db, trigger, ...options });
+  }
+
+  #alertTriggerProperties = this.#endpoint<RestAPIType.AlertTriggerOptions>('./manage/v2/databases/:db/triggers/:trigger/properties')
+    .withGet()
+    .withPut()
+    .build();
+
+  public getAlertTriggerProperties<T extends RestAPIType.AlertTriggerOptions>(db: T['db'], trigger: T['trigger'], options?: Omit<T, 'db' | 'trigger'>) {
+    return this.#alertTriggerProperties.get({ db, trigger, ...options });
+  }
+
+  public updateAlertTriggerProperties<T extends RestAPIType.AlertTriggerOptions>(db: T['db'], trigger: T['trigger'], properties: StructuredType.AlertTrigger, options?: Omit<T, 'db' | 'trigger'>) {
+    return this.#alertTriggerProperties.put({ db, trigger, ...options }, { data: properties });
+  }
+
+  #cpfConfigs = this.#endpoint<RestAPIType.CpfConfigsOptions>('./manage/v2/databases/:db/cpf-configs')
+    .withGet()
+    .withPost()
+    .build();
+
+  public getCpfConfigs<T extends RestAPIType.CpfConfigsOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#cpfConfigs.get({ db, ...options });
+  }
+
+  public createCpfConfig<T extends RestAPIType.CpfConfigsOptions>(db: T['db'], config: StructuredType.CpfConfig, options?: Omit<T, 'db'>) {
+    return this.#cpfConfigs.post({ db, ...options }, { data: config });
+  }
+
+  #cpfConfigDomain = this.#endpoint<RestAPIType.CpfConfigDomainOptions>('./manage/v2/databases/:db/cpf-configs/:domain')
+    .withGet()
+    .withDelete()
+    .build();
+
+  public getCpfDomainConfig<T extends RestAPIType.CpfConfigDomainOptions>(db: T['db'], domain: T['domain'], options?: Omit<T, 'db' | 'domain'>) {
+    return this.#cpfConfigDomain.get({ db, domain, ...options });
+  }
+
+  public deleteCpfDomainConfig<T extends RestAPIType.CpfConfigDomainOptions>(db: T['db'], domain: T['domain'], options?: Omit<T, 'db' | 'domain'>) {
+    return this.#cpfConfigDomain.delete({ db, domain, ...options });
+  }
+
+  #cpfConfigDomainProperties = this.#endpoint<RestAPIType.CpfConfigDomainOptions>('./manage/v2/databases/:db/cpf-configs/:domain/properties')
+    .withGet()
+    .withPut()
+    .build();
+
+  public getCpfDomainConfigProperties<T extends RestAPIType.CpfConfigDomainOptions>(db: T['db'], domain: T['domain'], options?: Omit<T, 'db' | 'domain'>) {
+    return this.#cpfConfigDomainProperties.get({ db, domain, ...options });
+  }
+
+  public updateCpfDomainConfigProperties<T extends RestAPIType.CpfConfigDomainOptions>(db: T['db'], domain: T['domain'], properties: StructuredType.CpfConfig, options?: Omit<T, 'db' | 'domain'>) {
+    return this.#cpfConfigDomainProperties.put({ db, domain, ...options }, { data: properties });
+  }
+
+  #cpfDomains = this.#endpoint<RestAPIType.CpfConfigsOptions>('./manage/v2/databases/:db/domains')
+    .withGet()
+    .withPost()
+    .build();
+
+  public getCpfDomains<T extends RestAPIType.CpfConfigsOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#cpfDomains.get({ db, ...options });
+  }
+
+  public createCpfDomain<T extends RestAPIType.CpfConfigsOptions>(db: T['db'], domain: StructuredType.CpfDomain, options?: Omit<T, 'db'>) {
+    return this.#cpfDomains.post({ db, ...options }, { data: domain });
+  }
+
+  #cpfDomain = this.#endpoint<RestAPIType.CpfConfigDomainOptions>('./manage/v2/databases/:db/domains/:domain')
+    .withGet()
+    .withDelete()
+    .build();
+
+  public getCpfDomain<T extends RestAPIType.CpfConfigDomainOptions>(db: T['db'], domain: T['domain'], options?: Omit<T, 'db' | 'domain'>) {
+    return this.#cpfDomain.get({ db, domain, ...options });
+  }
+
+  public deleteCpfDomain<T extends RestAPIType.CpfConfigDomainOptions>(db: T['db'], domain: T['domain'], options?: Omit<T, 'db' | 'domain'>) {
+    return this.#cpfDomain.delete({ db, domain, ...options });
+  }
+
+  #cpfDomainProperties = this.#endpoint<RestAPIType.CpfConfigDomainOptions>('./manage/v2/databases/:db/domains/:domain/properties')
+    .withGet()
+    .withPut()
+    .build();
+
+  public getCpfDomainProperties<T extends RestAPIType.CpfConfigDomainOptions>(db: T['db'], domain: T['domain'], options?: Omit<T, 'db' | 'domain'>) {
+    return this.#cpfDomainProperties.get({ db, domain, ...options });
+  }
+
+  public updateCpfDomainProperties<T extends RestAPIType.CpfConfigDomainOptions>(db: T['db'], domain: T['domain'], properties: StructuredType.CpfDomain, options?: Omit<T, 'db' | 'domain'>) {
+    return this.#cpfDomainProperties.put({ db, domain, ...options }, { data: properties });
+  }
+
+  #cpfPipelines = this.#endpoint<RestAPIType.CpfConfigsOptions>('./manage/v2/databases/:db/pipelines')
+    .withGet()
+    .withPost()
+    .build();
+
+  public getCpfPipelines<T extends RestAPIType.CpfConfigsOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#cpfPipelines.get({ db, ...options });
+  }
+
+  public createCpfPipeline<T extends RestAPIType.CpfConfigsOptions>(db: T['db'], pipeline: StructuredType.CpfPipeline, options?: Omit<T, 'db'>) {
+    return this.#cpfPipelines.post({ db, ...options }, { data: pipeline });
+  }
+
+  #cpfPipeline = this.#endpoint<RestAPIType.CpfConfigPipelineOptions>('./manage/v2/databases/:db/pipelines/:pipeline')
+    .withGet()
+    .withDelete()
+    .build();
+
+  public getCpfPipeline<T extends RestAPIType.CpfConfigPipelineOptions>(db: T['db'], pipeline: T['pipeline'], options?: Omit<T, 'db' | 'pipeline'>) {
+    return this.#cpfPipeline.get({ db, pipeline, ...options });
+  }
+
+  public deleteCpfPipeline<T extends RestAPIType.CpfConfigPipelineOptions>(db: T['db'], pipeline: T['pipeline'], options?: Omit<T, 'db' | 'pipeline'>) {
+    return this.#cpfPipeline.delete({ db, pipeline, ...options });
+  }
+
+  #cpfPipelineProperties = this.#endpoint<RestAPIType.CpfConfigPipelineOptions>('./manage/v2/databases/:db/pipelines/:pipeline/properties')
+    .withGet()
+    .withPut()
+    .build();
+
+  public getCpfPipelineProperties<T extends RestAPIType.CpfConfigPipelineOptions>(db: T['db'], pipeline: T['pipeline'], options?: Omit<T, 'db' | 'pipeline'>) {
+    return this.#cpfPipelineProperties.get({ db, pipeline, ...options });
+  }
+
+  public updateCpfPipelineProperties<T extends RestAPIType.CpfConfigPipelineOptions>(db: T['db'], pipeline: T['pipeline'], properties: StructuredType.CpfPipeline, options?: Omit<T, 'db' | 'pipeline'>) {
+    return this.#cpfPipelineProperties.put({ db, pipeline, ...options }, { data: properties });
+  }
+
+  #databases = this.#endpoint('./manage/v2/databases')
+    .withGet<RestAPIType.DatabasesOptions>()
+    .withPost<RestAPIType.BaseDatabaseOptions>()
+    .build();
+
+  public getDatabases<T extends RestAPIType.DatabasesOptions>(options?: T) {
+    return this.#databases.get({ ...options });
+  }
+
+  public createDatabase<T extends RestAPIType.BaseDatabaseOptions>(db: StructuredType.Database, options?: T) {
+    return this.#databases.post({ ...options }, { data: db });
+  }
+
+  #database = this.#endpoint<RestAPIType.DatabaseOptions>('./manage/v2/databases/:db')
+    .withGet()
+    .withPost()
+    .withDelete<RestAPIType.DeleteDatabaseOptions>()
+    .build();
+
+  public getDatabase<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.get({ db, ...options });
+  }
+
+  public clearDatabase<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'clear-database' } });
+  }
+
+  public backupDatabase<T extends RestAPIType.DatabaseOptions>(db: T['db'], backupOptions: StructuredType.DatabaseBackupOptions, options?: Omit<T, 'db'>) {
+    return this.#database.post<RestAPIType.JobCreatedResponse>({ db, ...options }, { data: { operation: 'backup-database', ...backupOptions } });
+  }
+
+  public validateDatabaseBackup<T extends RestAPIType.DatabaseOptions>(db: T['db'], backupOptions: StructuredType.DatabaseBackupOptions, options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'backup-validate', ...backupOptions } });
+  }
+
+  public getDatabaseBackupStatus<T extends RestAPIType.DatabaseOptions, K extends RestAPIType.JobCreatedResponse>(db: T['db'], jobId: K['job-id'], hostName?: K['host-name'], options?: Omit<T, 'db'>) {
+    return this.#database.post<RestAPIType.JobStatusResponse>({ db, ...options }, { data: { operation: 'backup-status', 'job-id': jobId, 'host-name': hostName } });
+  }
+
+  public cancelDatabaseBackup<T extends RestAPIType.DatabaseOptions>(db: T['db'], jobId: RestAPIType.JobCreatedResponse['job-id'], options?: Omit<T, 'db'>) {
+    return this.#database.post<RestAPIType.CancelJobResponse>({ db, ...options }, { data: { operation: 'backup-cancel', 'job-id': jobId } });
+  }
+
+  public purgeBackups<T extends RestAPIType.DatabaseOptions>(db: T['db'], backupDir: string, keepNumBackups: number, options?: Omit<T, 'db'>) {
+    return this.#database.post<{ readonly purged: boolean }>({ db, ...options }, { data: { operation: 'backup-purge', 'backup-dir': backupDir, 'keep-num-backups': keepNumBackups } });
+  }
+
+  public restoreDatabase<T extends RestAPIType.DatabaseOptions>(db: T['db'], restoreOptions: StructuredType.DatabaseRestoreOptions, options?: Omit<T, 'db'>) {
+    return this.#database.post<RestAPIType.JobCreatedResponse>({ db, ...options }, { data: { operation: 'restore-database', ...restoreOptions } });
+  }
+
+  public validateDatabaseRestore<T extends RestAPIType.DatabaseOptions>(db: T['db'], restoreOptions: StructuredType.DatabaseRestoreOptions, options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'restore-validate', ...restoreOptions } });
+  }
+
+  public getDatabaseRestoreStatus<T extends RestAPIType.DatabaseOptions>(db: T['db'], jobId: RestAPIType.JobCreatedResponse['job-id'], options?: Omit<T, 'db'>) {
+    return this.#database.post<RestAPIType.JobStatusResponse>({ db, ...options }, { data: { operation: 'restore-status', 'job-id': jobId } });
+  }
+
+  public cancelDatabaseRestore<T extends RestAPIType.DatabaseOptions>(db: T['db'], jobId: RestAPIType.JobCreatedResponse['job-id'], options?: Omit<T, 'db'>) {
+    return this.#database.post<RestAPIType.CancelJobResponse>({ db, ...options }, { data: { operation: 'restore-cancel', 'job-id': jobId } });
+  }
+
+  public mergeDatabase<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post<void>({ db, ...options }, { data: { operation: 'merge-database' } });
+  }
+
+  public reindexDatabase<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post<void>({ db, ...options }, { data: { operation: 'reindex-database' } });
+  }
+
+  public setDatabaseDefaults<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post<void>({ db, ...options }, { data: { operation: 'set-database-defaults' } });
+  }
+
+  public addForeignReplicas<T extends RestAPIType.DatabaseOptions>(db: T['db'], foreignReplicas: StructuredType.DatabaseForeignReplica['foreign-replica'][], options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'add-foreign-replicas', 'foreign-replica': foreignReplicas } });
+  }
+
+  public removeForeignReplicas<T extends RestAPIType.DatabaseOptions>(db: T['db'], foreignDatabases: StructuredType.DatabaseForeignReplica['foreign-replica']['foreign-database-name'][], options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'remove-foreign-replicas', 'foreign-database-name': foreignDatabases } });
+  }
+
+  public setForeignMaster<T extends RestAPIType.DatabaseOptions>(db: T['db'], foreignMaster: StructuredType.DatabaseForeignMaster, options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'set-foreign-master', 'foreign-master': foreignMaster } });
+  }
+
+  public removeForeignMaster<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'remove-foreign-master' } });
+  }
+
+  public rollbackForestsToNonblockingTimestamp<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'rollback-forests-to-nonblocking-timestamp' } });
+  }
+
+  public validateReplicaIndexes<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'validate-replica-indexes' } });
+  }
+
+  public suspendDatabaseReplication<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'suspend-database-replication' } });
+  }
+
+  public resumeDatabaseReplication<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.post({ db, ...options }, { data: { operation: 'resume-database-replication' } });
+  }
+
+  public deleteDatabase<T extends RestAPIType.DeleteDatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#database.delete({ db, ...options });
+  }
+
+  #databaseProperties = this.#endpoint<RestAPIType.DatabaseOptions>('./manage/v2/databases/:db/properties')
+    .withGet()
+    .withPut()
+    .build();
+
+  public getDatabaseProperties<T extends RestAPIType.DatabaseOptions>(db: T['db'], options?: Omit<T, 'db'>) {
+    return this.#databaseProperties.get({ db, ...options });
+  }
+
+  public updateDatabaseProperties<T extends RestAPIType.DatabaseOptions>(db: T['db'], properties: StructuredType.Database, options?: Omit<T, 'db'>) {
+    return this.#databaseProperties.put({ db, ...options }, { data: properties });
+  }
 
   #flexrepDomains = this.#endpoint<RestAPIType.BaseFlexrepOptions>('./manage/v1/domains')
     .withGet()
@@ -648,7 +948,7 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 			requestBody = JSON.stringify(data);
 		}
 
-		const resp = await fetch(url, { ...init, body: requestBody });
+		const resp = await fetch(url, { ...this.#headers, ...init, body: requestBody });
 
 		// TODO: Additional logic
 
