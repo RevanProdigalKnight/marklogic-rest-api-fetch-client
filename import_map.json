@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "md5": "https://deno.land/std@0.120.0/hash/md5.ts"
+  }
+}

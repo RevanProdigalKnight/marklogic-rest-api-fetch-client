@@ -90,7 +90,6 @@ class JsonPatchBuilder extends PatchBuilder {
 }
 
 class XmlPatchBuilder extends PatchBuilder {
-	static readonly #serializer = new XMLSerializer();
 
 	static #getXmlElementDetails(value: JsonXmlValue | JsonXmlValue[]) {
 		if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -102,11 +101,14 @@ class XmlPatchBuilder extends PatchBuilder {
 		return { content: value };
 	}
 
+  // NOTE: Create serializer on a per-instance basis so that unit tests in Deno don't fail
+	readonly #serializer = new XMLSerializer();
+
 	readonly #document = document.implementation.createDocument('http://marklogic.com/rest-api', 'rapi:patch');
 	readonly #root = this.#document.documentElement;
 
 	build() {
-		return XmlPatchBuilder.#serializer.serializeToString(this.#document);
+		return this.#serializer.serializeToString(this.#document);
 	}
 
 	delete(...elements: XmlPatchDelete[]) {

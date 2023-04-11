@@ -58,6 +58,8 @@ export interface BaseDocumentsOptions extends Parameters {
 export interface DeleteDocumentsOptions extends BaseDocumentsOptions {
 	readonly uri: MaybeArray<string>;
 
+  readonly format?: never;
+
 	readonly category?: MaybeArray<CategoryType>;
 	readonly 'temporal-collection'?: string;
 	readonly 'system-time'?: primitive;
@@ -89,6 +91,9 @@ export interface PatchDocumentsOptions extends BaseDocumentsOptions {
 	readonly 'system-time'?: primitive;
 }
 export interface PostDocumentsOptions extends BaseDocumentsOptions {
+  readonly uri: string;
+
+  readonly format?: ReturnFormatType;
 	readonly 'temporal-collection'?: string;
 	readonly transform?: string;
 	readonly 'system-time'?: primitive;

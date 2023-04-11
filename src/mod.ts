@@ -1,13 +1,14 @@
 import * as StructuredType from './MarkLogicStructuredTypes.ts';
 import * as RestAPIType from './MarkLogicRestAPITypes.ts';
 
-import { ReturnFormatType } from './MarkLogicStructuredTypes.ts';
 import { XML } from './MarkLogicRestAPITypes.ts';
 
+import { AuthClient, AuthClientMethod } from './AuthClient.ts';
 import PatchBuilder from './PatchBuilder.ts';
 import QueryBuilder from './QueryBuilder.ts';
-import { parseMultipartMixed } from './ResponseUtils.ts';
+import { homogenizeBodyData, parseMultipartMixed } from './HttpBodyUtils.ts';
 
+export type { AuthClientMethod } from './AuthClient.ts';
 export * from './MarkLogicStructuredTypes.ts';
 export * from './MarkLogicRestAPITypes.ts';
 export { default as PatchBuilder } from './PatchBuilder.ts';
@@ -15,15 +16,32 @@ export { default as QueryBuilder } from './QueryBuilder.ts';
 export * from './QueryBuilder.ts';
 
 import EndpointBuilder, { EndpointMethodImplementation, ExtendedRequestInit } from './EndpointBuilder.ts';
+import { SimpleConsole } from './UtilityTypes.ts';
 export { default as EndpointBuilder } from './EndpointBuilder.ts';
 
 export type ArrayType<T> = T extends unknown[] ? T : never;
 
-export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Record<string, never>> {
-	readonly #baseURI: string;
-	readonly #defaultImplementation: EndpointMethodImplementation = (init => this.#fetch(init));
-	readonly #preferredFormat: ReturnFormatType;
-  readonly #headers: HeadersInit;
+export interface AuthOptions {
+  readonly method?: AuthClientMethod;
+  readonly username?: string;
+  readonly password?: string;
+  readonly options?: Record<string, unknown>;
+}
+
+export interface MarkLogicRestAPIClientOptions {
+  readonly auth?: AuthOptions;
+  readonly baseURI?: string;
+  readonly defaultHeaders?: HeadersInit;
+  readonly logger?: SimpleConsole;
+}
+
+export default class MarkLogicRestAPIClient<CE extends Record<string, unknown> = Record<string, never>> {
+  readonly #defaultImplementation: EndpointMethodImplementation = (init => this.#fetch(init));
+
+  readonly #baseURI: string;
+  readonly #authClient: AuthClient;
+  readonly #defaultHeaders: HeadersInit;
+  readonly #logger?: SimpleConsole;
 
 	public readonly PatchBuilder = PatchBuilder;
 	public readonly QueryBuilder = QueryBuilder;
@@ -31,15 +49,26 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 
 	public readonly customMethods = {} as CE;
 
-	public constructor(baseURI = '/', preferredFormat: ReturnFormatType = 'json', headers: HeadersInit) {
-		this.#baseURI = baseURI;
-		this.#preferredFormat = preferredFormat;
-    this.#headers = headers;
+	public constructor(options: MarkLogicRestAPIClientOptions = {}) {
+    this.#baseURI = options.baseURI ?? '/';
+    this.#defaultHeaders = options.defaultHeaders ?? {};
+    this.#logger = options.logger;
+
+    const auth = { method: 'none' as AuthClientMethod, ...options.auth };
+    this.#authClient = AuthClient.create(auth.method, auth.username, auth.password, { logger: this.#logger, ...auth.options });
 	}
 
 	public get fetch() {
 		return this.#fetch;
 	}
+
+  public login(username?: string, password?: string) {
+    return Promise.resolve(this.#authClient.login(this.#getRequestURL('.', {}), username, password));
+  }
+
+  public logout() {
+    return Promise.resolve(this.#authClient.logout());
+  }
 
 	#configQuery = this.#endpoint('./v1/config/query/:name')
 		.withDelete<RestAPIType.DeleteConfigQueryOptions>()
@@ -175,8 +204,14 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 		return this.#documents.head({ ...options, uri });
 	}
 
-	public insertDocument<T extends RestAPIType.PostDocumentsOptions>(uri: NonNullable<T['uri']>, document: NonNullable<ExtendedRequestInit['data']>, options?: Omit<T, 'uri'>) {
-		return this.#documents.post({ ...options, uri }, { data: document });
+  // NOTE: Alias for insertDocument
+  public createDocument<T extends RestAPIType.PutDocumentsOptions>(uri: NonNullable<T['uri']>, document: NonNullable<ExtendedRequestInit['data']>, options?: Omit<T, 'uri'>) {
+    return this.insertDocument(uri, document, options);
+  }
+
+	public insertDocument<T extends RestAPIType.PutDocumentsOptions>(uri: NonNullable<T['uri']>, document: NonNullable<ExtendedRequestInit['data']>, options?: Omit<T, 'uri'>) {
+    // NOTE: Multi-document insert uses POST, single-document uses PUT
+		return this.#documents.put({ ...options, uri }, { data: document });
 	}
 
 	public patchDocument<T extends RestAPIType.PatchDocumentsOptions>(uri: NonNullable<T['uri']>, patch: string | { readonly patch: StructuredType.JsonPatchDescriptor[] }, options?: Omit<T, 'uri'>) {
@@ -905,7 +940,7 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
     return this.#flexrepDomainTargetRule.delete({ domain, target, rule, ...options });
   }
 
-  public withCustomEndpoint<T extends Record<string, unknown>>(path: string, additionalMethods: ((this: MarkLogicRestAPI<CE>, endpoint: EndpointBuilder) => T), defaultImplementation?: EndpointMethodImplementation) {
+  public withCustomEndpoint<T extends Record<string, unknown>>(path: string, additionalMethods: ((this: MarkLogicRestAPIClient<CE>, endpoint: EndpointBuilder) => T), defaultImplementation?: EndpointMethodImplementation) {
     const builder = this.#endpoint(path, defaultImplementation);
 
     const methods = additionalMethods.call(this, builder);
@@ -922,7 +957,7 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
       (this.customMethods as Record<string, unknown>)[key] = value;
     }
 
-    return this as unknown as MarkLogicRestAPI<CE & T>;
+    return this as unknown as MarkLogicRestAPIClient<CE & T>;
   }
 
 	#endpoint<P extends RestAPIType.Parameters>(path: string, defaultImplementation: EndpointMethodImplementation = this.#defaultImplementation) {
@@ -932,25 +967,22 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 	async #fetch({ path, params, data, body, ...init }: ExtendedRequestInit) {
 		const url = this.#getRequestURL(path, params);
 
-		let requestBody = body;
+    const requestBody = await homogenizeBodyData(body, data);
 
-		if (
-			ArrayBuffer.isView(data) ||
-			data instanceof ArrayBuffer ||
-			data instanceof Blob ||
-			data instanceof File ||
-			data instanceof FormData ||
-			data instanceof ReadableStream ||
-			typeof data === 'string'
-		) {
-			requestBody = data;
-		} else if (data !== undefined) {
-			requestBody = JSON.stringify(data);
-		}
+    const authorization = this.#authClient.getAuthHeader(url, init.method, requestBody);
 
-		const resp = await fetch(url, { ...this.#headers, ...init, body: requestBody });
+    const requestHeaders = new Headers({ ...this.#defaultHeaders, ...init.headers });
+    if (authorization && !requestHeaders.has('Authorization')) {
+      requestHeaders.set('Authorization', authorization);
+    }
 
-		// TODO: Additional logic
+		const resp = await fetch(url, { ...init, headers: requestHeaders, body: requestBody });
+
+    // Update digest auth (basic, null auth clients are no-ops)
+	  this.#authClient.parseAuthResponse(resp.headers.get('WWW-Authenticate'));
+
+    // Log request status summary
+    this.#logger?.log('MarkLogicRestAPIClient:', resp.status, init.method?.toUpperCase().padEnd(6, ' '), url.toString());
 
 		return resp;
 	}
@@ -963,7 +995,7 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 			return value?.toString() ?? 'null';
 		});
 
-		const result = new URL(this.#baseURI + pathname, document.URL);
+		const result = new URL(this.#baseURI + pathname);
 
 		for (const [key, value] of Object.entries(parameters)) {
 			if (Array.isArray(value)) {
@@ -977,10 +1009,6 @@ export default class MarkLogicRestAPI<CE extends Record<string, unknown> = Recor
 			} else if (value !== null && value !== undefined && value !== false) {
 				result.searchParams.set(key, value.toString());
 			}
-		}
-
-		if (!result.searchParams.has('format')) {
-			result.searchParams.set('format', this.#preferredFormat);
 		}
 
 		return result;

@@ -3,6 +3,26 @@ const decoder = new TextDecoder();
 const cr = '\r'.charCodeAt(0);
 const lf = '\n'.charCodeAt(0);
 
+export function homogenizeBodyData(body?: BodyInit | null, data?: unknown): Promise<ArrayBuffer | null> {
+  if (body) {
+    return new Response(body).arrayBuffer();
+  } else if (
+    ArrayBuffer.isView(data) ||
+    data instanceof ReadableStream ||
+    data instanceof ArrayBuffer ||
+    data instanceof Blob ||
+    data instanceof File ||
+    data instanceof FormData ||
+    typeof data === 'string'
+  ) {
+    return new Response(body).arrayBuffer();
+  } else if (data !== undefined) {
+    return new Response(JSON.stringify(data)).arrayBuffer();
+  }
+
+  return Promise.resolve(null);
+}
+
 export function *httpBodyLineReader(buf: Uint8Array): Generator<Uint8Array, Uint8Array, number | undefined> {
   let start = 0;
   let end = 0;
