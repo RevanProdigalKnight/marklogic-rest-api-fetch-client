@@ -1,4 +1,4 @@
-import { Md5 } from 'md5';
+import { Md5 } from 'https://deno.land/std@0.120.0/hash/md5.ts';
 
 import type { SimpleConsole } from './UtilityTypes.ts';
 
