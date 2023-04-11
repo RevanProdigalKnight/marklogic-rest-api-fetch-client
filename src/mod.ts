@@ -1002,8 +1002,8 @@ export default class MarkLogicRestAPIClient<CE extends Record<string, unknown> =
 			return value?.toString() ?? 'null';
 		});
 
-    // NOTE: deno/browser cross-compat
-		const result = new URL(this.#baseURI + pathname, typeof Deno === 'undefined' ? document.URL : undefined);
+    // NOTE: deno/browser cross-compat - Deno allows path-only URL constructor but browser requires a base URL
+		const result = new URL(this.#baseURI + pathname, location?.href ?? 'http://localhost');
 
 		for (const [key, value] of Object.entries(parameters)) {
 			if (Array.isArray(value)) {
