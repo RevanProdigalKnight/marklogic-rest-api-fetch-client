@@ -3,6 +3,5 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"lib": ["esnext", "dom", "deno.ns"]
-	},
-  "importMap": "import_map.json"
+	}
 }
