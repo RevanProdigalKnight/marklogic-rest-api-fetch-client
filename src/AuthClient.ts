@@ -61,6 +61,8 @@ class BasicAuthClient extends AuthClient {
     this.#auth = `Basic ${btoa([username, password].join(':'))}`;
 
     const resp = await fetch(uri, { headers: { Authorization: this.#auth } });
+    // NOTE: deno_compat - read response body that Deno automatically opens (fetch spec mismatch)
+    resp.text();
 
     if (resp.status === 401) {
       this.logout();
@@ -265,12 +267,16 @@ class DigestAuthClient extends AuthClient {
     this.#hasAuth = false;
 
     const initResp = await fetch(uri);
+    // NOTE: deno_compat - read response body that Deno automatically opens (fetch spec mismatch)
+    initResp.text();
 
     this.parseAuthResponse(initResp.headers.get('WWW-Authenticate'));
 
     if (initResp.status === 401) {
       if (this.#hasAuth) {
         const finalResp = await fetch(uri, { headers: { Authorization: this.getAuthHeader(uri) } });
+        // NOTE: deno_compat - read response body that Deno automatically opens (fetch spec mismatch)
+        finalResp.text();
 
         if (finalResp.status === 401) {
           this.logout();

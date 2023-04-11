@@ -1,4 +1,4 @@
-import { beforeEach, afterEach, beforeAll, afterAll, describe, it } from 'https://deno.land/std@0.182.0/testing/bdd.ts';
+import { beforeEach, afterEach, describe, it } from 'https://deno.land/std@0.182.0/testing/bdd.ts';
 import { assertSpyCalls, assertSpyCallArgs, stub, Stub } from 'https://deno.land/std@0.182.0/testing/mock.ts';
 import { expect } from "https://deno.land/x/expect@v0.3.0/mod.ts";
 
@@ -9,43 +9,6 @@ const db_password = 'admin';
 const db_host = 'http://localhost:8011/';
 
 const documentUri = 'THIS_DOCUMENT_SHOULDNT_EXIST_IN_THE_DATABASE_ALREADY_IF_IT_DOES_SOMETHING_WENT_WRONG.json';
-
-/**
- * NOTE: Deno automatically opens response bodies upon receiving them, which goes against the `fetch` spec.
- *
- * The following automatically closes any unread response bodies when a test finishes.
- */
-let fetchStub: Stub;
-let responses: Response[];
-
-beforeAll(() => {
-  const globalFetch = fetch;
-
-  fetchStub = stub(self, 'fetch', async (...a) => {
-    const resp = await globalFetch(...a);
-
-    responses.push(resp);
-
-    return resp;
-  });
-});
-
-afterAll(() => {
-  fetchStub.restore();
-});
-
-beforeEach(() => {
-  responses = [];
-});
-
-afterEach(() => {
-  responses.forEach(resp => {
-    if (!resp.bodyUsed) {
-      resp.body?.cancel();
-    }
-  })
-});
-/* END - Automatic closing of unread response bodies */
 
 describe('null auth client', () => {
   let client: MarkLogicRestAPIClient;
@@ -111,25 +74,31 @@ const authClientSuite = (method: AuthClientMethod) => () => {
           expect(searchResults.results.length).toBe(0);
         }
 
-        expect((await client.getDocument(documentUri)).status).toBe(404);
+        const checkDocumentExistenceResponse = await client.getDocument(documentUri);
+        expect(checkDocumentExistenceResponse.status).toBe(404);
+        await checkDocumentExistenceResponse.body?.cancel();
 
         const createDocumentResponse = await client.insertDocument(documentUri, { testDocument: true });
         expect(createDocumentResponse.status).toBe(201);
+        await createDocumentResponse.body?.cancel();
 
         const createdDocumentResponse = await client.getDocument(documentUri).then(resp => resp.json());
         expect(createdDocumentResponse).toEqual({ testDocument: true });
 
         const updateDocumentResponse = await client.updateDocument(documentUri, { testDocument: false });
         expect(updateDocumentResponse.status).toBe(204);
+        await updateDocumentResponse.body?.cancel();
 
         const updatedDocumentResponse = await client.getDocument(documentUri).then(resp => resp.json());
         expect(updatedDocumentResponse).toEqual({ testDocument: false });
 
         const deleteDocumentResponse = await client.deleteDocument(documentUri);
         expect(deleteDocumentResponse.status).toBe(204);
+        await deleteDocumentResponse.body?.cancel();
 
         const deletedDocumentResponse = await client.getDocument(documentUri);
         expect(deletedDocumentResponse.status).toBe(404);
+        await deletedDocumentResponse.body?.cancel();
       });
     });
 
@@ -138,11 +107,13 @@ const authClientSuite = (method: AuthClientMethod) => () => {
 
       const resp1 = await client.search('test');
       expect(resp1.status).toBe(200);
+      await resp1.body?.cancel();
 
       await client.logout();
 
       const resp2 = await client.search('test');
       expect(resp2.status).toBe(401);
+      await resp2.body?.cancel();
     });
   });
 
@@ -172,7 +143,7 @@ describe('warnings', () => {
   });
 
   const createClient = (auth: AuthOptions) => new MarkLogicRestAPIClient({
-    auth: { username: 'test', password: 'test', ...auth, options: { logger: console, ...auth?.options } }
+    auth: { ...auth, options: { logger: console, ...auth?.options } }
   });
 
   it('warns if trying to use an unknown auth method', () => {
