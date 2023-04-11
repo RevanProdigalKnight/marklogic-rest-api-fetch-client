@@ -54,6 +54,79 @@ async function geoQueryWithDocumentsAttachedToResults(query: string, regions: Re
 
 ## Advanced Usage
 
+### Client Options
+
+All client constructor options are optional.
+
+| Name             | Type                    | Default     | Description                                                                                      |
+| ----------------:|:-----------------------:|:-----------:|:------------------------------------------------------------------------------------------------ |
+| `auth`           | `string \| AuthOptions` | `'none'`    | Authorization method/options. More below under [Authorization Handlers](#authorization-handlers) |
+| `baseURI`        | `string`                | `'/'`       | The base URI to use in order to construct dynamic paths                                          |
+| `defaultHeaders` | `HeadersInit`           | `{}`        | Default headers to include on all requests                                                       |
+| `logger`         | `ConsoleLike`           |             | Logger object with `log`, `info`, `warn`, `error`, `debug`, and `trace` methods                  |
+
+In order to use client options, pass an object containing the keys you want to use something other than the default, e.g.:
+
+```ts
+import MarkLogicRestAPIClient from 'https://raw.githubusercontent.com/RevanProdigalKnight/marklogic-rest-api-fetch-client/main/src/mod.ts';
+
+const client = new MarkLogicRestAPIClient({
+  baseURI: 'https://some.hostname/mldb:8011',     // Interact with a MarkLogic Server instance running on a different host
+  defaultHeaders: { Accept: 'application/json' }, // Try to get response as JSON whenever possible, by default
+  logger: new Logger({ level: 'info' }),          // Custom logger instance
+});
+
+```
+
+### Authorization Handlers
+
+By default, the `MarkLogicRestAPIClient` does not attempt to add authorization to any of the requests it makes. It was originally intended to only run in a browser against a server which would proxy API requests using a JWT.
+
+As part of the separation effort where I am bringing this client out of the project it was developed as a part of, I have added authorization handling for Basic and Digest authorization schemes; this is meant primarily for running the client directly in Deno, but can be used in the browser as well.
+
+#### Basic Authorization Example
+
+```ts
+import MarkLogicRestAPIClient from 'https://raw.githubusercontent.com/RevanProdigalKnight/marklogic-rest-api-fetch-client/main/src/mod.ts';
+
+const client = new MarkLogicRestAPIClient({ auth: 'basic' });
+
+await client.login('your_username', 'your_password');
+
+// Client operations...
+
+await client.logout(); // Forgets the session
+```
+
+#### Digest Authorization Example
+
+```ts
+import MarkLogicRestAPIClient from 'https://raw.githubusercontent.com/RevanProdigalKnight/marklogic-rest-api-fetch-client/main/src/mod.ts';
+
+const client = new MarkLogicRestAPIClient({
+  auth: {
+    method: 'digest',
+    options: { // This and all sub-properties are entirely optional. Defaults are shown here.
+      algorithm:       'MD5',     // or 'MD5-sess'. Any other value here will be ignored and MD5 will be used instead
+      cnonceSize:      32,        // Any integer (floating-point numbers are coerced to integers)
+      logger:          undefined, // Any Console-like object offering the following methods: `log`, `info`, `warn`, `error`, `debug`, and `trace`
+      precomputedHash: false,
+    },
+  },
+});
+
+// Alternatively, if you don't want/need to provide custom options:
+const client = new MarkLogicRestAPIClient({ auth: 'digest' });
+
+await client.login('your_username', 'your_password');
+
+// Client operations...
+
+await client.logout(); // Forgets the session, username, and password
+```
+
+### Custom Endpoint Handlers
+
 MarkLogic Server offers the ability to extend the standard REST API with custom endpoints.
 
 In order to facilitate communicating with custom REST endpoints, the client is equipped with a `.withCustomEndpoint` method, which takes two arguments:

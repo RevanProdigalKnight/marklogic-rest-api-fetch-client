@@ -29,7 +29,7 @@ export interface AuthOptions {
 }
 
 export interface MarkLogicRestAPIClientOptions {
-  readonly auth?: AuthOptions;
+  readonly auth?: AuthClientMethod | AuthOptions;
   readonly baseURI?: string;
   readonly defaultHeaders?: HeadersInit;
   readonly logger?: SimpleConsole;
@@ -54,15 +54,22 @@ export default class MarkLogicRestAPIClient<CE extends Record<string, unknown> =
     this.#defaultHeaders = options.defaultHeaders ?? {};
     this.#logger = options.logger;
 
-    const auth = { method: 'none' as AuthClientMethod, ...options.auth };
-    this.#authClient = AuthClient.create(auth.method, auth.username, auth.password, { logger: this.#logger, ...auth.options });
+    const auth = typeof options.auth === 'string'
+      ? { method: options.auth as AuthClientMethod }
+      : { method: 'none' as AuthClientMethod, ...options.auth }
+      ;
+    this.#authClient = AuthClient.create(auth.method, { logger: this.#logger, ...auth.options });
 	}
 
 	public get fetch() {
 		return this.#fetch;
 	}
 
-  public login(username?: string, password?: string) {
+  public get isLoggedIn() {
+    return this.#authClient.isLoggedIn;
+  }
+
+  public login(username: string, password: string) {
     return Promise.resolve(this.#authClient.login(this.#getRequestURL('.', {}), username, password));
   }
 

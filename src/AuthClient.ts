@@ -5,14 +5,10 @@ import type { SimpleConsole } from './UtilityTypes.ts';
 export type AuthClientMethod = 'none' | 'basic' | 'digest';
 
 export abstract class AuthClient {
-  static create(method: AuthClientMethod, username = '', password = '', options?: DigestAuthClientOptions) {
-    if (method !== 'none' && (!username || !password)) {
-      throw new Error('Missing username or password required in order to create auth client!');
-    }
-
+  static create(method: AuthClientMethod, options?: DigestAuthClientOptions) {
     switch (method) {
-      case 'basic': return new BasicAuthClient(username, password);
-      case 'digest': return new DigestAuthClient(username, password, options as DigestAuthClientOptions);
+      case 'basic': return new BasicAuthClient();
+      case 'digest': return new DigestAuthClient(options as DigestAuthClientOptions);
       default:
         console.warn(`Unknown auth method "${method}". Using null auth client.`);
         /* falls through */
@@ -20,13 +16,11 @@ export abstract class AuthClient {
     }
   }
 
-  constructor(protected username = '', protected password = '') {}
-
   get isLoggedIn(): boolean {
     return false;
   }
 
-  abstract login(uri: string | URL, username?: string, password?: string): void | Promise<void>;
+  abstract login(uri: string | URL, username: string, password: string): void | Promise<void>;
   abstract logout(): void | Promise<void>;
 
   abstract getAuthHeader(uri: string | URL, method?: string, body?: string | ArrayBuffer | null): string | undefined;
@@ -59,23 +53,12 @@ class NullAuthClient extends AuthClient {
 class BasicAuthClient extends AuthClient {
   #auth = '';
 
-  constructor(username: string, password: string) {
-    super(username, password);
-
-    this.#updateAuth(username, password);
-  }
-
   get isLoggedIn() {
     return this.#auth !== '';
   }
 
-  async login(uri: string | URL, username = this.username, password = this.password) {
-    if (username !== this.username || password !== this.password) {
-      this.username = username;
-      this.password = password;
-
-      this.#updateAuth(username, password);
-    }
+  async login(uri: string | URL, username: string, password: string) {
+    this.#auth = `Basic ${btoa([username, password].join(':'))}`;
 
     const resp = await fetch(uri, { headers: { Authorization: this.#auth } });
 
@@ -89,8 +72,6 @@ class BasicAuthClient extends AuthClient {
   }
 
   logout() {
-    this.username = '';
-    this.password = '';
     this.#auth = '';
   }
 
@@ -100,10 +81,6 @@ class BasicAuthClient extends AuthClient {
 
   parseAuthResponse() {
     return true;
-  }
-
-  #updateAuth(username: string, password: string) {
-    this.#auth = `Basic ${btoa([username, password].join(':'))}`;
   }
 }
 /** END - Basic Auth Client */
@@ -175,6 +152,7 @@ function field(fieldName: string, fieldValue = '') {
 }
 
 const NONCE_CHARS = 'abcdef0123456789';
+const NONCE_CHARS_SIZE = NONCE_CHARS.length;
 
 class Digest {
   static #parseQop(qop?: string) {
@@ -192,13 +170,9 @@ class Digest {
   }
 
   static #makeNonce(size: number) {
-    const nonce: string[] = [];
-
-    for (let i = 0; i < size; i++) {
-      nonce.push(NONCE_CHARS[Math.floor(Math.random() * NONCE_CHARS.length)]);
-    }
-
-    return nonce.join('');
+    return [...crypto.getRandomValues(new Uint8Array(size))]
+      .map(offset => NONCE_CHARS[offset % NONCE_CHARS_SIZE])
+      .join('');
   }
 
   readonly #cnonceSize: number;
@@ -262,8 +236,11 @@ class DigestAuthClient extends AuthClient {
 
   #hasAuth = false;
 
-  constructor(user: string, password: string, options?: DigestAuthClientOptions) {
-    super(user, password);
+  #username = '';
+  #password = '';
+
+  constructor(options?: DigestAuthClientOptions) {
+    super();
 
     this.#logger = options?.logger;
     this.#precomputedHash = options?.precomputedHash ?? false;
@@ -281,13 +258,11 @@ class DigestAuthClient extends AuthClient {
     return this.#hasAuth;
   }
 
-  async login(uri: string | URL, username = this.username, password = this.password) {
-    if (username !== this.username && password !== this.password) {
-      this.username = username;
-      this.password = password;
+  async login(uri: string | URL, username: string, password: string) {
+    this.#username = username;
+    this.#password = password;
 
-      this.#hasAuth = false;
-    }
+    this.#hasAuth = false;
 
     const initResp = await fetch(uri);
 
@@ -311,8 +286,8 @@ class DigestAuthClient extends AuthClient {
   }
 
   logout() {
-    this.username = '';
-    this.password = '';
+    this.#username = '';
+    this.#password = '';
     this.#digest.reset();
   }
 
@@ -322,7 +297,7 @@ class DigestAuthClient extends AuthClient {
     const { pathname, search } = new URL(uri);
     const path = pathname + search;
 
-    let ha1 = this.#precomputedHash ? this.password : hash(this.username, this.#digest.realm, this.password);
+    let ha1 = this.#precomputedHash ? this.#password : hash(this.#username, this.#digest.realm, this.#password);
     if (this.#digest.algorithm === 'MD5-sess') {
       ha1 = hash(ha1, this.#digest.nonce, this.#digest.cnonce);
     }
@@ -340,7 +315,7 @@ class DigestAuthClient extends AuthClient {
     return [
       this.#digest.scheme,
       [
-        field('username', this.username),
+        field('username', this.#username),
         field('realm', this.#digest.realm),
         field('nonce', this.#digest.nonce),
         field('uri', path),

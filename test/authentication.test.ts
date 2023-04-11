@@ -2,7 +2,7 @@ import { beforeEach, afterEach, beforeAll, afterAll, describe, it } from 'https:
 import { assertSpyCalls, assertSpyCallArgs, stub, Stub } from 'https://deno.land/std@0.182.0/testing/mock.ts';
 import { expect } from "https://deno.land/x/expect@v0.3.0/mod.ts";
 
-import MarkLogicRestAPIClient, { AuthClientMethod, MarkLogicRestAPIClientOptions } from '../src/mod.ts';
+import MarkLogicRestAPIClient, { AuthClientMethod, AuthOptions } from '../src/mod.ts';
 
 const db_username = 'admin';
 const db_password = 'admin';
@@ -70,16 +70,10 @@ describe('null auth client', () => {
 });
 
 const authClientSuite = (method: AuthClientMethod) => () => {
-  it('refuses to construct if username or password are not given', () => {
-    expect(() => new MarkLogicRestAPIClient({ auth: { method } })).toThrow('Missing username or password required in order to create auth client!');
-    expect(() => new MarkLogicRestAPIClient({ auth: { method, username: 'test' } })).toThrow('Missing username or password required in order to create auth client!');
-    expect(() => new MarkLogicRestAPIClient({ auth: { method, password: 'test' } })).toThrow('Missing username or password required in order to create auth client!');
-  });
-
   it('fails to log in if username/password are invalid', async () => {
-    const client = new MarkLogicRestAPIClient({ baseURI: db_host, auth: { method, username: 'test', password: 'test' } });
+    const client = new MarkLogicRestAPIClient({ baseURI: db_host, auth: { method } });
 
-    await expect(client.login()).rejects.toThrow('Incorrect username/password!');
+    await expect(client.login('test', 'test')).rejects.toThrow('Incorrect username/password!');
   });
 
   describe('with username/password provided', () => {
@@ -87,7 +81,7 @@ const authClientSuite = (method: AuthClientMethod) => () => {
 
     beforeEach(() => {
       client = new MarkLogicRestAPIClient({
-        auth: { method, username: db_username, password: db_password, options: { logger: console } },
+        auth: { method, options: { logger: console } },
         baseURI: db_host,
         defaultHeaders: { Accept: 'application/json' },
       });
@@ -97,11 +91,11 @@ const authClientSuite = (method: AuthClientMethod) => () => {
       await client.logout();
     });
 
-    it('logs in to the database correctly', () => expect(client.login()).resolves.toBe(undefined));
+    it('logs in to the database correctly', () => expect(client.login(db_username, db_password)).resolves.toBe(undefined));
 
     describe('when logged in', () => {
       beforeEach(async () => {
-        await client.login();
+        await client.login(db_username, db_password);
       });
 
       it('is capable of running basic operations until logged out', async () => {
@@ -140,7 +134,7 @@ const authClientSuite = (method: AuthClientMethod) => () => {
     });
 
     it('logs out immediately when logout is called', async () => {
-      await client.login();
+      await client.login(db_username, db_password);
 
       const resp1 = await client.search('test');
       expect(resp1.status).toBe(200);
@@ -150,6 +144,16 @@ const authClientSuite = (method: AuthClientMethod) => () => {
       const resp2 = await client.search('test');
       expect(resp2.status).toBe(401);
     });
+  });
+
+  it('can be used with the { auth: method } constructor form', async () => {
+    const c = new MarkLogicRestAPIClient({ baseURI: db_host, auth: method });
+
+    await c.login(db_username, db_password);
+
+    expect(c.isLoggedIn).toBe(true);
+
+    await c.logout();
   });
 };
 
@@ -167,7 +171,7 @@ describe('warnings', () => {
     consoleWarnStub.restore();
   });
 
-  const createClient = (auth: MarkLogicRestAPIClientOptions['auth']) => new MarkLogicRestAPIClient({
+  const createClient = (auth: AuthOptions) => new MarkLogicRestAPIClient({
     auth: { username: 'test', password: 'test', ...auth, options: { logger: console, ...auth?.options } }
   });
 
