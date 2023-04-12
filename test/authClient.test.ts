@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, it } from 'https://deno.land/std@0.182.0/testing/bdd.ts';
 import { assertSpyCalls, assertSpyCallArgs, stub, Stub } from 'https://deno.land/std@0.182.0/testing/mock.ts';
-import { expect } from "https://deno.land/x/expect@v0.3.0/mod.ts";
+import { expect } from 'https://deno.land/x/expect@v0.3.0/mod.ts';
 
 import MarkLogicRestAPIClient, { AuthClientMethod, AuthOptions } from '../src/mod.ts';
 
@@ -15,6 +15,8 @@ describe('null auth client', () => {
 
   beforeEach(async () => {
     client = new MarkLogicRestAPIClient({ baseURI: db_host });
+
+    expect(client.isLoggedIn).toBe(true);
 
     await client.login(db_username, db_password);
   });
@@ -38,6 +40,42 @@ const authClientSuite = (method: AuthClientMethod) => () => {
 
     await expect(client.login('test', 'test')).rejects.toThrow('Incorrect username/password!');
   });
+
+  it('fails to log in if the server response is a non-OK, non-401 error code', async () => {
+    const fetchStub = stub(self, 'fetch', () => Promise.resolve(new Response('500 Internal Server Error', { status: 500 })));
+
+    const client = new MarkLogicRestAPIClient({ auth: { method } });
+
+    await expect(client.login('', '')).rejects.toThrow(/^An error occurred while attempting to log in:/);
+
+    fetchStub.restore();
+  });
+
+  if (method === 'digest') {
+    it('fails to log in if the second server response is a non-OK, non-401 error code', async () => {
+      const actualFetch = fetch;
+
+      const fetchStub = stub(
+        self,
+        'fetch',
+        (url: URL | RequestInfo, init?: RequestInit) => {
+          const req = new Request(url, init);
+
+          if (req.headers.has('Authorization')) {
+            return Promise.resolve(new Response('500 Internal Server Error', { status: 500 }))
+          }
+
+          return actualFetch(req);
+        },
+      );
+
+      const client = new MarkLogicRestAPIClient({ baseURI: db_host, auth: { method } });
+
+      await expect(client.login('', '')).rejects.toThrow(/^An error occurred while attempting to log in:/);
+
+      fetchStub.restore();
+    });
+  }
 
   describe('with username/password provided', () => {
     let client: MarkLogicRestAPIClient;

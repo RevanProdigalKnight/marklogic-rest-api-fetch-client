@@ -61,8 +61,8 @@ class BasicAuthClient extends AuthClient {
     this.#auth = `Basic ${btoa([username, password].join(':'))}`;
 
     const resp = await fetch(uri, { headers: { Authorization: this.#auth } });
-    // NOTE: deno_compat - read response body that Deno automatically opens (fetch spec mismatch)
-    resp.text();
+    // NOTE: deno_compat - close response body that Deno automatically opens (fetch spec mismatch)
+    await resp.body?.cancel();
 
     if (resp.status === 401) {
       this.logout();
@@ -267,16 +267,16 @@ class DigestAuthClient extends AuthClient {
     this.#hasAuth = false;
 
     const initResp = await fetch(uri);
-    // NOTE: deno_compat - read response body that Deno automatically opens (fetch spec mismatch)
-    initResp.text();
+    // NOTE: deno_compat - close response body that Deno automatically opens (fetch spec mismatch)
+    await initResp.body?.cancel();
 
     this.parseAuthResponse(initResp.headers.get('WWW-Authenticate'));
 
     if (initResp.status === 401) {
       if (this.#hasAuth) {
         const finalResp = await fetch(uri, { headers: { Authorization: this.getAuthHeader(uri) } });
-        // NOTE: deno_compat - read response body that Deno automatically opens (fetch spec mismatch)
-        finalResp.text();
+        // NOTE: deno_compat - close response body that Deno automatically opens (fetch spec mismatch)
+        await finalResp.body?.cancel();
 
         if (finalResp.status === 401) {
           this.logout();
@@ -288,6 +288,8 @@ class DigestAuthClient extends AuthClient {
 
         this.#digest.update();
       }
+    } else if (!initResp.ok) {
+      throw new Error(`An error occurred while attempting to log in: ${initResp.statusText}`);
     }
   }
 

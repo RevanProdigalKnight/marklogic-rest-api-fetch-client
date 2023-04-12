@@ -1,1 +1,6 @@
+.coverage
+
+*.lcov
 *.sublime-workspace
+
+coverage.txt

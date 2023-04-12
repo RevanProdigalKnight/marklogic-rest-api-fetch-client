@@ -6,7 +6,7 @@ import { XML } from './MarkLogicRestAPITypes.ts';
 import { AuthClient, AuthClientMethod } from './AuthClient.ts';
 import PatchBuilder from './PatchBuilder.ts';
 import QueryBuilder from './QueryBuilder.ts';
-import { homogenizeBodyData, parseMultipartMixed } from './HttpBodyUtils.ts';
+import * as httpBodyUtils from './HttpBodyUtils.ts';
 
 export type { AuthClientMethod } from './AuthClient.ts';
 export * from './MarkLogicStructuredTypes.ts';
@@ -168,7 +168,7 @@ export default class MarkLogicRestAPIClient<CE extends Record<string, unknown> =
 		.withGet<RestAPIType.GetDocumentsOptions>()
 		.withHead<RestAPIType.HeadDocumentsOptions>()
 		.withPatch<RestAPIType.PatchDocumentsOptions>()
-		.withPost<RestAPIType.PostDocumentsOptions>()
+		.withPost<RestAPIType.PostDocumentsOptions, RestAPIType.PostDocumentsResponse>()
 		.withPut<RestAPIType.PutDocumentsOptions>()
 		.build();
 
@@ -195,16 +195,7 @@ export default class MarkLogicRestAPIClient<CE extends Record<string, unknown> =
 
 		return this.#documents
 			.get({ ...options, uri: uris }, { headers: { Accept: 'multipart/mixed' } })
-			.then(async resp => [resp.headers.get('Content-Type'), await resp.arrayBuffer()] as [string, ArrayBuffer])
-			.then(([contentType, body]) => {
-				const boundary = (contentType.match(/(?<=boundary=)"?(.*?)(?=[";]|$)/) ?? []).pop();
-
-				if (!boundary) {
-					throw new Error('Unable to parse boundary from Content-Type header!');
-				}
-
-				return parseMultipartMixed(boundary, body);
-			});
+      .then(httpBodyUtils.parseMultipartMixed);
 	}
 
 	public getDocumentHeaders<T extends RestAPIType.HeadDocumentsOptions>(uri: NonNullable<T['uri']>, options?: Omit<T, 'uri'>) {
@@ -228,6 +219,21 @@ export default class MarkLogicRestAPIClient<CE extends Record<string, unknown> =
 	public updateDocument<T extends RestAPIType.PutDocumentsOptions>(uri: NonNullable<T['uri']>, document: NonNullable<ExtendedRequestInit['data']>, options?: Omit<T, 'uri'>) {
 		return this.#documents.put({ ...options, uri }, { data: document });
 	}
+
+  // NOTE: Alias for insertDocuments
+  public createDocuments<T extends RestAPIType.PostDocumentsOptions>(documents: Record<string, unknown>, options?: T) {
+    return this.insertDocuments(documents, options);
+  }
+
+  public insertDocuments<T extends RestAPIType.PostDocumentsOptions>(documents: Record<string, unknown>, options?: T) {
+    return httpBodyUtils.createMultipartMixed(documents)
+      .then(({ contentType, data }) => this.#documents.post({ ...options }, { data, headers: { 'Content-Type': contentType } }));
+  }
+
+  // NOTE: Alias for insertDocuments
+  public updateDocuments<T extends RestAPIType.PostDocumentsOptions>(documents: Record<string, unknown>, options?: T) {
+    return this.insertDocuments(documents, options);
+  }
 
 	#search = this.#endpoint('./v1/search')
 		.withDelete<RestAPIType.DeleteSearchOptions>()
@@ -974,7 +980,7 @@ export default class MarkLogicRestAPIClient<CE extends Record<string, unknown> =
 	async #fetch({ path, params, data, body, ...init }: ExtendedRequestInit) {
 		const url = this.#getRequestURL(path, params);
 
-    const requestBody = await homogenizeBodyData(body, data);
+    const requestBody = await httpBodyUtils.homogenizeBodyData(body, data);
 
     const authorization = this.#authClient.getAuthHeader(url, init.method, requestBody);
 

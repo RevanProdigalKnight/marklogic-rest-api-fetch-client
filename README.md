@@ -6,7 +6,7 @@ This library is not feature complete, but should be capable of performing the mo
 
 Pull requests to add missing functionality are welcome.
 
-Documentation is unfortunately sparse at the moment as I was a bit rushed turning this into a public project compared to what I had originally planned.
+Documentation and unit tests are unfortunately sparse at the moment as I was a bit rushed turning this into a public project compared to what I had originally planned.
 
 ## Usage
 

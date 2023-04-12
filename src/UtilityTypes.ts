@@ -1,4 +1,3 @@
-
 export interface SimpleConsole {
   readonly log: Console['log'];
   readonly info: Console['info'];

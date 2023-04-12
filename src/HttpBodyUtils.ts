@@ -1,23 +1,35 @@
+import { getMimetypeForFilename } from './MimetypeUtils.ts';
+
 const decoder = new TextDecoder();
+const encoder = new TextEncoder();
 
-const cr = '\r'.charCodeAt(0);
-const lf = '\n'.charCodeAt(0);
+const crlf = '\r\n';
 
-export function homogenizeBodyData(body?: BodyInit | null, data?: unknown): Promise<ArrayBuffer | null> {
-  if (body) {
+const cr = crlf.charCodeAt(0);
+const lf = crlf.charCodeAt(1);
+
+const headerBodyBoundary = encoder.encode(crlf.repeat(2));
+
+const boundaryGenerationBuffer = new Uint8Array(16);
+
+export function homogenizeBodyData(body?: BodyInit | null, data?: unknown): Promise<ArrayBuffer | Uint8Array | null> {
+  if (typeof body === 'string') {
+    return Promise.resolve(encoder.encode(body));
+  } else if (body) {
     return new Response(body).arrayBuffer();
+  } else if (typeof data === 'string') {
+    return Promise.resolve(encoder.encode(data));
   } else if (
     ArrayBuffer.isView(data) ||
     data instanceof ReadableStream ||
     data instanceof ArrayBuffer ||
     data instanceof Blob ||
     data instanceof File ||
-    data instanceof FormData ||
-    typeof data === 'string'
+    data instanceof FormData
   ) {
     return new Response(body).arrayBuffer();
   } else if (data !== undefined) {
-    return new Response(JSON.stringify(data)).arrayBuffer();
+    return Promise.resolve(encoder.encode(JSON.stringify(data)));
   }
 
   return Promise.resolve(null);
@@ -40,10 +52,6 @@ export function *httpBodyLineReader(buf: Uint8Array): Generator<Uint8Array, Uint
 	      if (start + length < l) {
 	      	end = start + length;
 
-	      	if (buf[end] !== cr || buf [end + 1] !== lf) {
-	      		console.warn('Expected CRLF after raw content!');
-	      	}
-
 	        yield buf.subarray(start, end);
 
 	        start = end + 2;
@@ -60,7 +68,7 @@ export function *httpBodyLineReader(buf: Uint8Array): Generator<Uint8Array, Uint
   return buf.subarray(start, end);
 }
 
-export function parseMultipartMixed(boundary: string, body: ArrayBuffer) {
+export function parseMultipartMixedBody(boundary: string, body: ArrayBuffer) {
   const buf = new Uint8Array(body);
   const attachments = [];
 
@@ -103,4 +111,77 @@ export function parseMultipartMixed(boundary: string, body: ArrayBuffer) {
   }
 
   return attachments;
+}
+
+export async function parseMultipartMixed(resp: Response) {
+  const contentType = resp.headers.get('Content-Type');
+
+  if (!contentType?.startsWith('multipart/mixed')) {
+    throw new Error(`Expected multipart/mixed response, got "${contentType}"!`);
+  }
+
+  const boundary = (contentType.match(/(?<=boundary=)"?(.*?)(?=[";]|$)/) ?? []).pop();
+
+  if (!boundary) {
+    throw new Error(`Unable to parse boundary from Content-Type header "${contentType}"`);
+  }
+
+  const body = await resp.arrayBuffer();
+
+  return parseMultipartMixedBody(boundary, body);
+}
+
+function concatBuffers(...buffers: ArrayBufferView[]) {
+  const totalLength = buffers.reduce((acc, buf) => acc + buf.byteLength, 0);
+  const res = new Uint8Array(totalLength);
+
+  let offset = 0;
+  for (const buffer of buffers) {
+    res.set(new Uint8Array(buffer.buffer), offset);
+
+    offset += buffer.byteLength;
+  }
+
+  return res;
+}
+
+export async function createMultipartMixed(parts: Record<string, unknown>) {
+  const boundary = btoa([...crypto.getRandomValues(boundaryGenerationBuffer)].join(''));
+
+  const contentTypeHeader = `multipart/mixed; boundary="${boundary}"`;
+  const bodyBoundary = encoder.encode(`${crlf}--${boundary}${crlf}`);
+
+  let multipartMixedBody = new Uint8Array(0);
+
+  const bodyParts: (Uint8Array | undefined)[] = await Promise.all(
+    Object.entries(parts)
+      .map(async ([filename, document]) => {
+        if (!document) {
+          return undefined;
+        }
+
+        const contentDisposition = `Content-Disposition: attachment; filename="${filename}"`;
+        const contentType = `Content-Type: ${getMimetypeForFilename(filename)}`;
+        const body = (await homogenizeBodyData(undefined, document))!;
+        const contentLength = `Content-Length: ${body.byteLength}`;
+
+        const headers = encoder.encode([contentDisposition, contentType, contentLength].join(crlf));
+
+        return concatBuffers(headers, headerBodyBoundary, new Uint8Array(body));
+      }, []),
+  );
+
+  for (const part of bodyParts) {
+    if (!part) {
+      continue;
+    }
+
+    multipartMixedBody = concatBuffers(
+      multipartMixedBody,
+      bodyBoundary,
+      part,
+    );
+  }
+
+  return { contentType: contentTypeHeader, data: concatBuffers(multipartMixedBody, encoder.encode(`${crlf}--${boundary}--${crlf}`)) };
 }

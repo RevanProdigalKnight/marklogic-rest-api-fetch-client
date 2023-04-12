@@ -91,8 +91,6 @@ export interface PatchDocumentsOptions extends BaseDocumentsOptions {
 	readonly 'system-time'?: primitive;
 }
 export interface PostDocumentsOptions extends BaseDocumentsOptions {
-  readonly uri: string;
-
   readonly format?: ReturnFormatType;
 	readonly 'temporal-collection'?: string;
 	readonly transform?: string;
@@ -113,6 +111,16 @@ export interface PutDocumentsOptions extends BaseDocumentsOptions {
 	readonly 'temporal-document'?: string;
 	readonly transform?: string;
 	readonly 'system-time'?: primitive;
+}
+
+export interface PostDocumentResult {
+  readonly uri: string;
+  readonly 'mime-type': string;
+  readonly category: string[];
+}
+
+export interface PostDocumentsResponse {
+  readonly documents: PostDocumentResult[];
 }
 
 /** Search */

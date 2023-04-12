@@ -3,5 +3,8 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"lib": ["esnext", "dom", "deno.ns"]
-	}
+	},
+  "tasks": {
+    "test": "deno test ./test/ --parallel --coverage=./.coverage --allow-net; deno coverage ./.coverage --lcov --output=./coverage.lcov && deno run --allow-read https://deno.land/x/code_coverage/cli.ts --file coverage.lcov -- > coverage.txt && rm -rf ./.coverage"
+  }
 }
