@@ -1,6 +1,6 @@
 # MarkLogic REST API fetch client
 
-A client for the MarkLogic REST API using the browser `fetch` API, intended to be run in modern web browsers/Deno.
+A client for the MarkLogic Server REST API using the browser `fetch` API, intended to be run in modern web browsers/Deno.
 
 This library is not feature complete, but should be capable of performing the most common MarkLogic REST API operations, including basic searches and document retrieval/modification. It is also capable of performing some less-used tasks which were prioritized by an internal project, including but not limited to setting/up modifying Flexible Replication and Alert configurations.
 
@@ -215,3 +215,42 @@ client.customMethods.countDocuments('Documents');
 client.customMethods.performWorkOnDocuments({ /* ... */ }, ['test.json']);
 client.customMethods.performWorkOnDocumentsInDatabase('Modules', { /* ... */ }, ['config.json']);
 ```
+
+## Areas for improvement/expansion
+
+As noted above, this library is not feature-complete across the entire MarkLogic Server REST API, and many endpoints have not been implemented. The following categories have limited support:
+
+- [Search](https://docs.marklogic.com/REST/client/search) (Has: Search; Missing: QBE, Suggest, Values)
+
+And these have no implementation at all:
+
+- [Alerting](https://docs.marklogic.com/REST/client/alerting)
+- [Configuration](https://docs.marklogic.com/REST/client/configuration)
+- [Row Management](https://docs.marklogic.com/REST/client/row-management)
+- [Service Extensions](https://docs.marklogic.com/REST/client/service-extension)
+- [Service Management](https://docs.marklogic.com/REST/client/service-management)
+- [Configuration Management API](https://docs.marklogic.com/REST/configuration-management-api)
+- [Management API](https://docs.marklogic.com/REST/management)
+  - [Admin](https://docs.marklogic.com/REST/management/admin)
+  - [App Servers](https://docs.marklogic.com/REST/management/app-servers)
+  - [Clusters](https://docs.marklogic.com/REST/management/clusters)
+  - [Database Rebalancer](https://docs.marklogic.com/REST/management/database-rebalancer)
+  - [Forests](https://docs.marklogic.com/REST/management/forests)
+  - [Groups](https://docs.marklogic.com/REST/management/groups)
+  - [Hosts](https://docs.marklogic.com/REST/management/hosts)
+  - [Meters](https://docs.marklogic.com/REST/management/meters)
+  - [Mimetypes](https://docs.marklogic.com/REST/management/mimetypes)
+  - [Requests](https://docs.marklogic.com/REST/management/requests)
+  - [Scheduled Tasks](https://docs.marklogic.com/REST/management/scheduled-tasks)
+  - [Security](https://docs.marklogic.com/REST/management/security)
+  - [SQL Schemas and Views](https://docs.marklogic.com/REST/management/sql-schemas-and-views)
+  - [Support](https://docs.marklogic.com/REST/management/support)
+  - [Temporal](https://docs.marklogic.com/REST/management/temporal)
+  - [Tickets](https://docs.marklogic.com/REST/management/tickets)
+  - [Transactions](https://docs.marklogic.com/REST/management/transactions)
+
+In addition to the broad API categories that have not yet been implemented, there are known deficiencies in some of the library's utility classes:
+
+- Query Builder, which is only partially completed
+- CTS Query Builder, Plan Builder, Values Builder (& their respective utilities) have not been implemented at all
+- XML Patch builder is currently only compatible with browsers - [`XMLSerializer`](https://developer.mozilla.org/en-US/docs/Web/API/XMLSerializer) does not exist in Deno (yet?)

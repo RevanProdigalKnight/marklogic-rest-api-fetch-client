@@ -5,10 +5,8 @@ import {
 	ReturnFormatType,
 	SparqlOptimizeLevel,
 } from './MarkLogicStructuredTypes.ts';
+import type { MaybeArray, primitive } from './UtilityTypes.ts';
 
-export type MaybeArray<T> = T | T[];
-
-export type primitive = string | bigint | number | boolean | null | undefined;
 /** Alias for data that should be a well-formatted XML string */
 export type XML = string;
 

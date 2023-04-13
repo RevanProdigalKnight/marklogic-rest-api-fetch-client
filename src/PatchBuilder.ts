@@ -11,6 +11,7 @@ import {
 	XmlPatchReplaceInsert,
 	XmlPatchReplaceLibrary,
 } from './MarkLogicStructuredTypes.ts';
+import type { MaybeArray, primitive } from './UtilityTypes.ts';
 
 const PatchBuilderLock = Symbol('PatchBuilder');
 
@@ -43,6 +44,100 @@ export default abstract class PatchBuilder {
 	abstract replace(...elements: XmlPatchReplace[]): this;
 	abstract replaceInsert(...elements: XmlPatchReplaceInsert[]): this;
 	abstract replaceLibrary(element: XmlPatchReplaceLibrary): this;
+
+  /** Document metadata shortcuts */
+  addCollections(...collections: string[]) {
+    return this.insert(...collections.map(collection => ({ context: '/array-node("collections")', content: collection })));
+  }
+
+  removeCollections(...collections: string[]) {
+    return this.delete(...collections.map(collection => ({ select: `/collections[. eq "${collection}"]` })));
+  }
+
+  addPermission(roleName: string, capabilities: MaybeArray<'insert' | 'update' | 'read' | 'execute'>) {
+    return this.insert({ context: '/array-node("permissions")', content: { 'role-name': roleName, capabilities: Array<string>().concat(capabilities) } });
+  }
+
+  replacePermission(roleName: string, capabilities: MaybeArray<'insert' | 'update' | 'read' | 'execute'>) {
+    return this.replace({ select: `/permissions[node("role-name") eq "${roleName}"]`, content: Array<string>().concat(capabilities) });
+  }
+
+  removePermission(roleName: string) {
+    return this.delete({ select: `/permissions[node("role-name") eq "${roleName}"]` });
+  }
+
+  addProperty(name: string, value: string | number | boolean | null) {
+    return this.insert({ context: '/object-node("properties")', content: { [name]: value } });
+  }
+
+  replaceProperty(name: string, value: string | number | boolean | null) {
+    return this.replace({ select: `/properties/node("${name}")`, content: value });
+  }
+
+  removeProperty(name: string) {
+    return this.delete({ select: `/properties/node("${name}")` });
+  }
+
+  setQuality(quality: number) {
+    return this.replace({ select: '/quality', content: quality });
+  }
+
+  addMetadataValue(name: string, value: string) {
+    return this.insert({ context: '/object-node("metadataValues")', content: { [name]: value } });
+  }
+
+  replaceMetadataValue(name: string, value: string) {
+    return this.replace({ select: `/metadataValues/node("${name}")`, content: value });
+  }
+
+  removeMetadataValue(name: string) {
+    return this.delete({ select: `/metadataValues/node("${name}")` });
+  }
+
+  /** Replacement shortcuts */
+  add(selector: string, n: number) {
+    return this.#apply(selector, 'ml.add', n);
+  }
+
+  subtract(selector: string, n: number) {
+    return this.#apply(selector, 'ml.subtract', n);
+  }
+
+  multiply(selector: string, n: number) {
+    return this.#apply(selector, 'ml.multiply', n);
+  }
+
+  divide(selector: string, n: number) {
+    return this.#apply(selector, 'ml.divide', n);
+  }
+
+  prepend(selector: string, content: string) {
+    return this.#apply(selector, 'ml.concat-before', content);
+  }
+
+  append(selector: string, content: string) {
+    return this.#apply(selector, 'ml.concat-after', content);
+  }
+
+  concat(selector: string, prepended: string, appended: string) {
+    return this.#apply(selector, 'ml.concat-between', prepended, appended);
+  }
+
+  substringAfter(selector: string, position: number) {
+    return this.#apply(selector, 'ml.substring-after', position);
+  }
+
+  substringBefore(selector: string, position: number) {
+    return this.#apply(selector, 'ml.substring-before', position);
+  }
+
+  replaceRegex(selector: string, match: string, replace: string, flags?: string) {
+    return this.#apply(selector, 'ml.replace-regex', match, replace, flags);
+  }
+
+  #apply(select: string, apply: string, ...args: unknown[]) {
+    return this.replace({ select, apply, content: args.filter(Boolean).map(arg => ({ $value: arg })) });
+  }
 }
 
 class JsonPatchBuilder extends PatchBuilder {
@@ -50,7 +145,6 @@ class JsonPatchBuilder extends PatchBuilder {
 
 	build() {
 		return { patch: this.#descriptors };
-		// return JSON.stringify(this.#descriptors);
 	}
 
 	delete(...elements: XmlPatchDelete[]) {
@@ -90,7 +184,6 @@ class JsonPatchBuilder extends PatchBuilder {
 }
 
 class XmlPatchBuilder extends PatchBuilder {
-
 	static #getXmlElementDetails(value: JsonXmlValue | JsonXmlValue[]) {
 		if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
 			const { '@attributes': attributes, '@text': text, ...rest } = value;
