@@ -1,4 +1,5 @@
-import { primitive, Parameters } from './MarkLogicRestAPITypes.ts';
+import { Parameters } from './MarkLogicRestAPITypes.ts';
+import { primitive } from './UtilityTypes.ts';
 
 const MethodNotAllowedError = new Error('Method not allowed');
 const NotImplementedError = new Error('Not implemented');

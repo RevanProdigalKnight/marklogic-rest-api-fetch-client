@@ -4,6 +4,7 @@ import {
 	PatchContent,
 	PatchElement,
 	PatchPositionSelector,
+	PermissionCapability,
 	XmlAttributes,
 	XmlPatchDelete,
 	XmlPatchInsert,
@@ -11,7 +12,7 @@ import {
 	XmlPatchReplaceInsert,
 	XmlPatchReplaceLibrary,
 } from './MarkLogicStructuredTypes.ts';
-import type { MaybeArray, primitive } from './UtilityTypes.ts';
+import type { MaybeArray } from './UtilityTypes.ts';
 
 const PatchBuilderLock = Symbol('PatchBuilder');
 
@@ -54,11 +55,11 @@ export default abstract class PatchBuilder {
     return this.delete(...collections.map(collection => ({ select: `/collections[. eq "${collection}"]` })));
   }
 
-  addPermission(roleName: string, capabilities: MaybeArray<'insert' | 'update' | 'read' | 'execute'>) {
+  addPermission(roleName: string, capabilities: MaybeArray<PermissionCapability>) {
     return this.insert({ context: '/array-node("permissions")', content: { 'role-name': roleName, capabilities: Array<string>().concat(capabilities) } });
   }
 
-  replacePermission(roleName: string, capabilities: MaybeArray<'insert' | 'update' | 'read' | 'execute'>) {
+  replacePermission(roleName: string, capabilities: MaybeArray<PermissionCapability>) {
     return this.replace({ select: `/permissions[node("role-name") eq "${roleName}"]`, content: Array<string>().concat(capabilities) });
   }
 
@@ -140,7 +141,7 @@ export default abstract class PatchBuilder {
   }
 }
 
-class JsonPatchBuilder extends PatchBuilder {
+export class JsonPatchBuilder extends PatchBuilder {
 	readonly #descriptors: JsonPatchDescriptor[] = [];
 
 	build() {
@@ -173,7 +174,7 @@ class JsonPatchBuilder extends PatchBuilder {
 
 	replaceLibrary(element: XmlPatchReplaceLibrary) {
 		if (this.replaceLibraryUsed) {
-			throw new Error('replaceLibrary can only used once per patch');
+			throw new Error('replaceLibrary can only be used once per patch');
 		}
 		this.replaceLibraryUsed = true;
 
@@ -183,7 +184,7 @@ class JsonPatchBuilder extends PatchBuilder {
 	}
 }
 
-class XmlPatchBuilder extends PatchBuilder {
+export class XmlPatchBuilder extends PatchBuilder {
 	static #getXmlElementDetails(value: JsonXmlValue | JsonXmlValue[]) {
 		if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
 			const { '@attributes': attributes, '@text': text, ...rest } = value;

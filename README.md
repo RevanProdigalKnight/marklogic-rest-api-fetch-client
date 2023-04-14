@@ -251,6 +251,28 @@ And these have no implementation at all:
 
 In addition to the broad API categories that have not yet been implemented, there are known deficiencies in some of the library's utility classes:
 
-- Query Builder, which is only partially completed
+- Query Builder, which is only partially completed. Missing/incomplete methods:
+  - `facet`
+  - `orderBy`
+  - `parseBindings`
+  - `parsedFrom`
+  - `parseFunction`
+  - `range`
+  - `rangeOptions`
+  - `score`
+  - `slice`
+  - `snippet`
+  - `sort`
+  - `suggestBindings`
+  - `term`
+  - `termOptions`
+  - `textQuery`
+  - `transform`
+  - `withOptions`
+  - `where` (if using CTS Query or Parsed Query)
+  - `word`
 - CTS Query Builder, Plan Builder, Values Builder (& their respective utilities) have not been implemented at all
-- XML Patch builder is currently only compatible with browsers - [`XMLSerializer`](https://developer.mozilla.org/en-US/docs/Web/API/XMLSerializer) does not exist in Deno (yet?)
+- XML Patch builder is currently only compatible with browsers - Required DOM APIs do not exist in Deno (yet?)
+  - [`XMLSerializer`](https://developer.mozilla.org/en-US/docs/Web/API/XMLSerializer)
+  - [`createDocument`](https://developer.mozilla.org/en-US/docs/Web/API/DOMImplementation/createDocument)
+  - [`XMLDocument`](https://developer.mozilla.org/en-US/docs/Web/API/XMLDocument)

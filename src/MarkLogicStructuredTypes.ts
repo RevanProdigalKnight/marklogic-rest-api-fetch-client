@@ -404,10 +404,12 @@ export interface AlertTriggerEvent {
   };
 }
 
+export type PermissionCapability = 'insert' | 'update' | 'read' | 'execute';
+
 export interface Permission {
   readonly permission: {
     readonly 'role-name': string;
-    readonly capability: string;
+    readonly capability: PermissionCapability;
   };
 }
 
